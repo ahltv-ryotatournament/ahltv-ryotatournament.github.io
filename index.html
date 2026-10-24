@@ -238,7 +238,13 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <div id="ad-own" hidden><h2 class="ah">Админы</h2>
     <div class="acc"><label class="fld"><span>Почта нового админа (он должен уже быть зарегистрирован)</span><input id="ad-new" type="email"></label><button class="btn" id="ad-add">Добавить админа</button><div class="acc" id="ad-list" style="margin:0"></div></div></div>
     </div>
-    <div id="ad-tours"><div id="ad-t"></div></div>
+    <div id="ad-tours"><div class="acc"><h2 class="ah" style="margin:0">Добавить игрока вручную</h2>
+      <div class="seg" id="ap-mode"><button class="on" data-pm="solo">1×1</button><button data-pm="duo">2×2</button></div>
+      <label class="fld"><span>Ник</span><input id="ap-nick"></label>
+      <label class="fld" id="ap-pf" hidden><span>Напарник</span><input id="ap-partner"></label>
+      <label class="fld"><span>Ссылка Steam (необязательно)</span><input id="ap-steam"></label>
+      <button class="btn" id="ap-add">Добавить в сетку</button></div>
+    <div id="ad-t"></div></div>
   </section>
   <section id="contact"><p class="eyebrow">Связь</p><h1>Связаться</h1>
     <div class="contacts">
@@ -341,8 +347,9 @@ function localDB(){
       return hash(m+p).then(function(h){var id="u"+(Object.keys(us).length+1);us[m]={id:id,h:h};sv("ah_users",us);var u={uid:id,email:m};sv("ah_me",u);setMe(u)})},
     login:function(m,p){var us=ls("ah_users",{});return hash(m+p).then(function(h){if(!us[m]||us[m].h!==h)throw "Неверная почта или пароль.";var u={uid:us[m].id,email:m};sv("ah_me",u);setMe(u)})},
     logout:function(){sv("ah_me",null);setMe(null);return Promise.resolve()},
-    add:function(a){var l=ls("ah_apps",[]);a.id=a.uid+"_"+a.mode;if(l.some(function(x){return x.id===a.id}))return Promise.reject("dup");l.push(a);sv("ah_apps",l);return Promise.resolve()},
+    add:function(a){var l=ls("ah_apps",[]);a.id=a.id||(a.uid+"_"+a.mode);if(l.some(function(x){return x.id===a.id}))return Promise.reject("dup");l.push(a);sv("ah_apps",l);return Promise.resolve()},
     slots:function(){return Promise.resolve(ls("ah_apps",[]))},
+    move:function(id,m){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.mode=m});sv("ah_apps",l);return Promise.resolve()},
     list:function(all){var l=ls("ah_apps",[]);return Promise.resolve(all?l:l.filter(function(a){return a.uid===ME.uid}))},
     set:function(id,s){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.status=s});sv("ah_apps",l);return Promise.resolve()},
     del:function(id){sv("ah_apps",ls("ah_apps",[]).filter(function(a){return a.id!==id}));return Promise.resolve()},
@@ -362,10 +369,11 @@ async function fbDB(){
     signup:function(m,p){return U.createUserWithEmailAndPassword(au,m,p)},
     login:function(m,p){return U.signInWithEmailAndPassword(au,m,p)},
     logout:function(){return U.signOut(au)},
-    add:function(a){var id=a.uid+"_"+a.mode,s={uid:a.uid,mode:a.mode,nick:a.nick,partner:a.partner,status:"new",t:a.t};return F.setDoc(F.doc(fs,"apps",id),a).then(function(){return F.setDoc(F.doc(fs,"slots",id),s)})},
+    add:function(a){var id=a.id||(a.uid+"_"+a.mode),s={uid:a.uid,mode:a.mode,nick:a.nick,partner:a.partner,status:a.status||"new",t:a.t};return F.setDoc(F.doc(fs,"apps",id),a).then(function(){return F.setDoc(F.doc(fs,"slots",id),s)})},
     slots:function(){return F.getDocs(F.collection(fs,"slots")).then(function(s){return s.docs.map(function(d){return d.data()})})},
     list:function(all){var q=all?ap:F.query(ap,F.where("uid","==",ME.uid));return F.getDocs(q).then(function(s){return s.docs.map(function(d){var x=d.data();x.id=d.id;return x})})},
     set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{status:s}).catch(function(){})})},
+    move:function(id,m){return F.updateDoc(F.doc(fs,"apps",id),{mode:m}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{mode:m}).catch(function(){})})},
     del:function(id){return F.deleteDoc(F.doc(fs,"apps",id)).then(function(){return F.deleteDoc(F.doc(fs,"slots",id)).catch(function(){})})},
     getStart:function(){return F.getDoc(st).then(function(d){return d.exists()?d.data().start:null})},
     setStart:function(v){return F.setDoc(st,{start:v})},
@@ -407,7 +415,7 @@ function loadAdminOld(){
   }).catch(function(){$("ad-t").innerHTML='<tr><td>Не удалось загрузить заявки.</td></tr>'});
 }
 $("ad-t").addEventListener("click",function(e){var b=e.target.closest("button");if(!b||!isAdmin())return;
-  (b.dataset.s==="del"?DB.del(b.dataset.id):DB.set(b.dataset.id,b.dataset.s)).then(loadAdmin)});
+  (b.dataset.s==="del"?DB.del(b.dataset.id):b.dataset.s==="mv"?DB.move(b.dataset.id,b.dataset.to):DB.set(b.dataset.id,b.dataset.s)).then(loadAdmin)});
 $("ad-save").addEventListener("click",function(){var v=$("ad-start").value;DB.setStart(v).then(function(){START=v||null;tick()})});
 function loadAdmins(){DB.getAdmins().then(function(l){ADMINS=l||[];refresh()}).catch(function(){})}
 function renderAdm(){
@@ -422,11 +430,17 @@ $("ad-add").addEventListener("click",function(){
 $("ad-list").addEventListener("click",function(e){var b=e.target.closest("button");if(!b||!isOwner())return;
   ADMINS=ADMINS.filter(function(x){return x!==b.dataset.m});DB.setAdmins(ADMINS).then(renderAdm)});
 function row(x){var s=x.status||"new",u=x.faceit||"",fc=/^https?:\/\//.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">профиль</a>':esc(u),id=esc(x.id);
-  return '<tr><td>'+esc(x.nick)+'</td>'+(x.mode==="duo"?'<td>'+esc(x.partner||"—")+'</td>':'')+'<td>'+esc(x.email)+'</td><td>'+fc+'</td><td class="s-'+s+'">'+STN[s]+'</td><td><button class="sm" data-id="'+id+'" data-s="ok">Принять</button><button class="sm" data-id="'+id+'" data-s="no">Отклонить</button><button class="sm" data-id="'+id+'" data-s="del">Удалить</button></td></tr>'}
+  return '<tr><td>'+esc(x.nick)+'</td>'+(x.mode==="duo"?'<td>'+esc(x.partner||"—")+'</td>':'')+'<td>'+esc(x.email)+'</td><td>'+fc+'</td><td class="s-'+s+'">'+STN[s]+'</td><td><button class="sm" data-id="'+id+'" data-s="ok">Принять</button><button class="sm" data-id="'+id+'" data-s="no">Отклонить</button><button class="sm" data-id="'+id+'" data-s="mv" data-to="'+(x.mode==="duo"?"solo":"duo")+'">'+(x.mode==="duo"?"В 1×1":"В 2×2")+'</button><button class="sm" data-id="'+id+'" data-s="del">Удалить</button></td></tr>'}
 document.querySelectorAll("#ad-tabs button").forEach(function(b){b.addEventListener("click",function(){
   document.querySelectorAll("#ad-tabs button").forEach(function(x){x.classList.toggle("on",x===b)});
   $("ad-tours").hidden=b.dataset.t!=="tours";$("ad-set").hidden=b.dataset.t!=="set"})});
+var apm="solo";
+document.querySelectorAll("#ap-mode button").forEach(function(b){b.addEventListener("click",function(){apm=b.dataset.pm;document.querySelectorAll("#ap-mode button").forEach(function(x){x.classList.toggle("on",x===b)});$("ap-pf").hidden=apm!=="duo"})});
+$("ap-add").addEventListener("click",function(){
+  var n=$("ap-nick").value.trim();if(!n||!isAdmin())return;
+  DB.add({id:"m"+Date.now(),uid:"admin",email:"добавлено админом",mode:apm,nick:n,partner:apm==="duo"?$("ap-partner").value.trim():"",faceit:$("ap-steam").value.trim(),status:"ok",t:Date.now()}).then(function(){$("ap-nick").value="";$("ap-partner").value="";$("ap-steam").value="";loadAdmin()})});
 function fillBr(){
+  ["solo","duo"].forEach(function(md){bracket(16,$("br-"+md))});
   if(!DB)return;
   DB.slots().then(function(l){
     ["solo","duo"].forEach(function(md){
