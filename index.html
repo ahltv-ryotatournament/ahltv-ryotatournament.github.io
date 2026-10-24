@@ -110,6 +110,7 @@ footer{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem;color:var(--
 .sm{padding:.3rem .6rem;margin:0 .2rem .2rem 0;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:.8rem}
 .s-ok{color:#6fd18a}.s-no{color:#e86b6b}
 .note{color:var(--muted);font-size:.9rem;margin:0}
+.m span.pend{opacity:.55}
 h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
 @media (max-width:820px){.hero{grid-template-columns:1fr}.stats{gap:.7rem;border:0;padding:0}main{padding-top:2.5rem}}
 </style>
@@ -167,7 +168,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
       <div class="facts"><div class="stat"><small>Слоты</small><b class="slots" data-unit="пар">16 пар</b></div><div class="stat"><small>Финал</small><b>До 3 карт</b></div><div class="stat"><small>Допуск</small><b>По уровню FACEIT</b></div></div>
       <div class="seg sz"><button data-n="16">16x</button><button data-n="8">8x</button></div><div class="br"></div>
     </div></section>
-  <section id="bracket"><p class="eyebrow">Сетка</p><h1>Сетка</h1><div class="seg sz"><button data-n="16">16x</button><button data-n="8">8x</button></div><div class="br"></div></section>
+  <section id="bracket"><p class="eyebrow">Сетка</p><h1>Сетка</h1><h2 class="ah">1×1</h2><div class="br" id="br-solo"></div><h2 class="ah">2×2</h2><div class="br" id="br-duo"></div></section>
   <section id="rules"><p class="eyebrow">Правила</p><h1>Правила</h1><div class="rules">
     <div class="rule"><h2>Участие</h2><ul>
       <li>Турнир открытый: два режима, 1×1 и 2×2, по 16 слотов в каждом.</li>
@@ -255,6 +256,7 @@ var START = null; // дата старта турнира (теперь зада
 function go(id){
   if(id==="admin"&&!isAdmin())id="account";
   if(id==="admin")loadAdmin();
+  if(id==="bracket")fillBr();
   document.querySelectorAll("section").forEach(function(s){s.classList.toggle("on",s.id===id)});
   document.querySelectorAll("nav button").forEach(function(b){b.classList.toggle("on",b.dataset.go===id && !b.classList.contains("cta") && !b.classList.contains("ghost"))});
   window.scrollTo(0,0);
@@ -275,7 +277,7 @@ function bracket(n,box){
   var h="",m=n/2;
   names.forEach(function(name){
     h+='<div class="rd"><h3>'+name+'</h3><div class="ms">';
-    var duo=!!box.closest("#m-duo");
+    var duo=!!box.closest("#m-duo")||box.id==="br-duo";
     var cell=duo?'<span class="pr"><i>—</i><i>—</i></span>':'<span>—</span>';
     for(var i=0;i<m;i++){h+='<div class="m">'+cell+cell+'</div>'}
     h+='</div></div>';
@@ -313,10 +315,10 @@ document.getElementById("send").addEventListener("click",function(){
   err.hidden=true;
   var text="Заявка на турнир ART AHLTV\nРежим: "+(fmode==="duo"?"2×2":"1×1")+"\nНик: "+nick+(fmode==="duo"?"\nНапарник: "+pt:"")+"\nПочта: "+mail+"\nSteam: "+fc;
   if(!ME){err.textContent="Сначала войдите в аккаунт.";err.hidden=false;go("account");return}
-  DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()}).then(function(){
+  DB.list(false).then(function(l){if(l.some(function(x){return x.mode===fmode}))throw "dup";return DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()})}).then(function(){
     document.getElementById("txt").textContent=text;
-    document.getElementById("res").hidden=false;refresh();
-  }).catch(function(){err.textContent="Не удалось отправить заявку.";err.hidden=false});
+    document.getElementById("res").hidden=false;refresh();fillBr();go("bracket");
+  }).catch(function(e){err.textContent=(e==="dup"||(e&&e.code==="permission-denied"))?"Вы уже зарегистрированы в этом режиме.":"Не удалось отправить заявку.";err.hidden=false});
 });
 document.getElementById("tg").addEventListener("click",function(){
   try{navigator.clipboard.writeText(document.getElementById("txt").textContent)}catch(e){}
@@ -339,7 +341,8 @@ function localDB(){
       return hash(m+p).then(function(h){var id="u"+(Object.keys(us).length+1);us[m]={id:id,h:h};sv("ah_users",us);var u={uid:id,email:m};sv("ah_me",u);setMe(u)})},
     login:function(m,p){var us=ls("ah_users",{});return hash(m+p).then(function(h){if(!us[m]||us[m].h!==h)throw "Неверная почта или пароль.";var u={uid:us[m].id,email:m};sv("ah_me",u);setMe(u)})},
     logout:function(){sv("ah_me",null);setMe(null);return Promise.resolve()},
-    add:function(a){var l=ls("ah_apps",[]);a.id="a"+Date.now();l.push(a);sv("ah_apps",l);return Promise.resolve()},
+    add:function(a){var l=ls("ah_apps",[]);a.id=a.uid+"_"+a.mode;if(l.some(function(x){return x.id===a.id}))return Promise.reject("dup");l.push(a);sv("ah_apps",l);return Promise.resolve()},
+    slots:function(){return Promise.resolve(ls("ah_apps",[]))},
     list:function(all){var l=ls("ah_apps",[]);return Promise.resolve(all?l:l.filter(function(a){return a.uid===ME.uid}))},
     set:function(id,s){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.status=s});sv("ah_apps",l);return Promise.resolve()},
     del:function(id){sv("ah_apps",ls("ah_apps",[]).filter(function(a){return a.id!==id}));return Promise.resolve()},
@@ -359,10 +362,11 @@ async function fbDB(){
     signup:function(m,p){return U.createUserWithEmailAndPassword(au,m,p)},
     login:function(m,p){return U.signInWithEmailAndPassword(au,m,p)},
     logout:function(){return U.signOut(au)},
-    add:function(a){return F.addDoc(ap,a)},
+    add:function(a){var id=a.uid+"_"+a.mode,s={uid:a.uid,mode:a.mode,nick:a.nick,partner:a.partner,status:"new",t:a.t};return F.setDoc(F.doc(fs,"apps",id),a).then(function(){return F.setDoc(F.doc(fs,"slots",id),s)})},
+    slots:function(){return F.getDocs(F.collection(fs,"slots")).then(function(s){return s.docs.map(function(d){return d.data()})})},
     list:function(all){var q=all?ap:F.query(ap,F.where("uid","==",ME.uid));return F.getDocs(q).then(function(s){return s.docs.map(function(d){var x=d.data();x.id=d.id;return x})})},
-    set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s})},
-    del:function(id){return F.deleteDoc(F.doc(fs,"apps",id))},
+    set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{status:s}).catch(function(){})})},
+    del:function(id){return F.deleteDoc(F.doc(fs,"apps",id)).then(function(){return F.deleteDoc(F.doc(fs,"slots",id)).catch(function(){})})},
     getStart:function(){return F.getDoc(st).then(function(d){return d.exists()?d.data().start:null})},
     setStart:function(v){return F.setDoc(st,{start:v})},
     getAdmins:function(){return F.getDoc(F.doc(fs,"cfg","admins")).then(function(d){return d.exists()?(d.data().emails||[]):[]})},
@@ -422,6 +426,18 @@ function row(x){var s=x.status||"new",u=x.faceit||"",fc=/^https?:\/\//.test(u)?'
 document.querySelectorAll("#ad-tabs button").forEach(function(b){b.addEventListener("click",function(){
   document.querySelectorAll("#ad-tabs button").forEach(function(x){x.classList.toggle("on",x===b)});
   $("ad-tours").hidden=b.dataset.t!=="tours";$("ad-set").hidden=b.dataset.t!=="set"})});
+function fillBr(){
+  if(!DB)return;
+  DB.slots().then(function(l){
+    ["solo","duo"].forEach(function(md){
+      var box=$("br-"+md);bracket(16,box);
+      var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md&&x.status!=="no"}).sort(function(x,y){return (x.t||0)-(y.t||0)}).slice(0,16);
+      var cells=box.querySelector(".rd").querySelectorAll(".m > span");
+      a.forEach(function(x,i){var c=cells[i];if(!c)return;c.classList.toggle("pend",x.status!=="ok");
+        if(md==="duo"){var s=c.querySelectorAll("i");s[0].textContent=x.nick;s[1].textContent=x.partner||"—"}else c.textContent=x.nick});
+    });
+  }).catch(function(){});
+}
 var amode="in";
 var ERR={"auth/email-already-in-use":"Эта почта уже зарегистрирована.","auth/invalid-credential":"Неверная почта или пароль.","auth/weak-password":"Пароль слишком короткий (минимум 6 символов).","auth/invalid-email":"Неверная почта.","auth/operation-not-allowed":"В Firebase не включён вход по почте и паролю (Authentication → Sign-in method → Email/Password).","auth/unauthorized-domain":"Домен сайта не добавлен в Authorized domains в Firebase.","auth/network-request-failed":"Нет связи с Firebase.","auth/invalid-api-key":"Неверный apiKey в конфиге Firebase."};
 function aerr(t){$("a-err").textContent=t;$("a-err").hidden=!t}
@@ -442,6 +458,7 @@ tick();setInterval(tick,1000);
   $("a-note").textContent=DB.local?"Демо-режим: аккаунты и заявки хранятся только в этом браузере.":"";
   DB.getStart().then(function(v){if(v){START=v;tick()}}).catch(function(){});
   if(ME)loadAdmins();
+  fillBr();
   refresh();
 })();
 go("home");
