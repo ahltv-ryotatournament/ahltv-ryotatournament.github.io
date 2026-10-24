@@ -171,7 +171,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
   <section id="rules"><p class="eyebrow">Правила</p><h1>Правила</h1><div class="rules">
     <div class="rule"><h2>Участие</h2><ul>
       <li>Турнир открытый: два режима, 1×1 и 2×2, по 16 слотов в каждом.</li>
-      <li>Допуск по уровню FACEIT. В заявке нужны игровой ник и ссылка на профиль FACEIT.</li>
+      <li>Допуск по уровню FACEIT. В заявке нужны игровой ник и ссылка на профиль Steam.</li>
       <li>Один игрок — один аккаунт. Играть с чужого или запасного аккаунта нельзя.</li>
       <li>Заявки принимаются по порядку подачи, пока есть свободные слоты. Организаторы подтверждают каждую заявку.</li>
       <li>В режиме 2×2 состав из двух игроков фиксируется в заявке. После начала турнира заменить игрока нельзя.</li>
@@ -206,7 +206,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <label class="fld"><span>Ник</span><input id="f-nick" type="text" autocomplete="nickname"></label>
     <label class="fld" id="pf" hidden><span>Ник напарника</span><input id="f-partner" type="text"></label>
     <label class="fld"><span>Почта</span><input id="f-mail" type="email" autocomplete="email"></label>
-    <label class="fld"><span>Профиль FACEIT (ссылка)</span><input id="f-faceit" type="url" placeholder="https://www.faceit.com/..."></label>
+    <label class="fld"><span>Профиль Steam (ссылка)</span><input id="f-faceit" type="url" placeholder="https://steamcommunity.com/id/..."></label>
     <p class="err" id="f-err" hidden></p>
     <button class="btn main" id="send">Отправить заявку</button>
     <div class="res" id="res" hidden>
@@ -233,6 +233,8 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
   </section>
   <section id="admin"><p class="eyebrow">Управление</p><h1>Админка</h1>
     <div class="acc"><label class="fld"><span>Дата и время старта турнира</span><input id="ad-start" type="datetime-local"></label><button class="btn" id="ad-save">Сохранить дату</button></div>
+    <div id="ad-own" hidden><h2 class="ah">Админы</h2>
+    <div class="acc"><label class="fld"><span>Почта нового админа (он должен уже быть зарегистрирован)</span><input id="ad-new" type="email"></label><button class="btn" id="ad-add">Добавить админа</button><div class="acc" id="ad-list" style="margin:0"></div></div></div>
     <h2 class="ah">Заявки</h2>
     <div class="tw"><table class="tbl" id="ad-t"></table></div>
   </section>
@@ -246,8 +248,8 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
 </main>
 <footer><span>© AHLTV Ryota Tournaments</span><span class="egg">TRa1Ks</span></footer>
 <script>
-var ADMIN_EMAIL=""; // почта админа, например "me@mail.com". Если пусто, в демо-режиме админ — первый зарегистрированный
-var FIREBASE=null;  // конфиг Firebase (объект). Пока null — работает демо-режим только в этом браузере
+var ADMIN_EMAIL="musik5456@gmail.com"; // почта админа, например "me@mail.com". Если пусто, в демо-режиме админ — первый зарегистрированный
+var FIREBASE={apiKey:"AIzaSyDjBDGogjRoiGPeMi4oSyOX8BbS0Y5Bfy0",authDomain:"ahltv-ryota-tournaments.firebaseapp.com",projectId:"ahltv-ryota-tournaments",storageBucket:"ahltv-ryota-tournaments.firebasestorage.app",messagingSenderId:"552716895009",appId:"1:552716895009:web:0fc731969008108b61b460"};  // конфиг Firebase (объект). Пока null — работает демо-режим только в этом браузере
 var START = null; // дата старта турнира (теперь задаётся в админке)
 function go(id){
   if(id==="admin"&&!isAdmin())id="account";
@@ -306,8 +308,9 @@ document.getElementById("send").addEventListener("click",function(){
   if(!nick||!/^\S+@\S+\.\S+$/.test(mail)||!fc||(fmode==="duo"&&!pt)){
     err.textContent="Заполните все поля, почта должна быть настоящей.";err.hidden=false;return;
   }
+  if(!/steamcommunity\.com\//i.test(fc)){err.textContent="Вставьте ссылку на профиль Steam (steamcommunity.com/...).";err.hidden=false;return}
   err.hidden=true;
-  var text="Заявка на турнир ART AHLTV\nРежим: "+(fmode==="duo"?"2×2":"1×1")+"\nНик: "+nick+(fmode==="duo"?"\nНапарник: "+pt:"")+"\nПочта: "+mail+"\nFACEIT: "+fc;
+  var text="Заявка на турнир ART AHLTV\nРежим: "+(fmode==="duo"?"2×2":"1×1")+"\nНик: "+nick+(fmode==="duo"?"\nНапарник: "+pt:"")+"\nПочта: "+mail+"\nSteam: "+fc;
   if(!ME){err.textContent="Сначала войдите в аккаунт.";err.hidden=false;go("account");return}
   DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()}).then(function(){
     document.getElementById("txt").textContent=text;
@@ -318,14 +321,15 @@ document.getElementById("tg").addEventListener("click",function(){
   try{navigator.clipboard.writeText(document.getElementById("txt").textContent)}catch(e){}
   window.open("https://t.me/iryots","_blank","noopener");
 });
-var ME=null,DB=null;
+var ME=null,DB=null,ADMINS=[];
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function ls(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function hash(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(String(s.split("").reduce(function(a,c){return (a*31+c.charCodeAt(0))|0},7)));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.from(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
-function setMe(u){ME=u;refresh()}
-function isAdmin(){return !!ME&&(ADMIN_EMAIL?ME.email===ADMIN_EMAIL.toLowerCase():!!(DB&&DB.local&&ME.uid==="u1"))}
+function setMe(u){ME=u;ADMINS=[];refresh();if(u&&DB)loadAdmins()}
+function isOwner(){return !!ME&&(ADMIN_EMAIL?ME.email===ADMIN_EMAIL.toLowerCase():!!(DB&&DB.local&&ME.uid==="u1"))}
+function isAdmin(){return isOwner()||(!!ME&&ADMINS.indexOf(ME.email)>-1)}
 // Демо-режим: всё хранится в localStorage этого браузера
 function localDB(){
   var cur=ls("ah_me",null);setTimeout(function(){setMe(cur)},0);
@@ -339,7 +343,9 @@ function localDB(){
     set:function(id,s){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.status=s});sv("ah_apps",l);return Promise.resolve()},
     del:function(id){sv("ah_apps",ls("ah_apps",[]).filter(function(a){return a.id!==id}));return Promise.resolve()},
     getStart:function(){return Promise.resolve(ls("ah_start",null))},
-    setStart:function(v){sv("ah_start",v);return Promise.resolve()}};
+    setStart:function(v){sv("ah_start",v);return Promise.resolve()},
+    getAdmins:function(){return Promise.resolve(ls("ah_admins",[]))},
+    setAdmins:function(l){sv("ah_admins",l);return Promise.resolve()}};
 }
 // Боевой режим: Firebase (общие аккаунты и заявки для всех посетителей)
 async function fbDB(){
@@ -357,7 +363,9 @@ async function fbDB(){
     set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s})},
     del:function(id){return F.deleteDoc(F.doc(fs,"apps",id))},
     getStart:function(){return F.getDoc(st).then(function(d){return d.exists()?d.data().start:null})},
-    setStart:function(v){return F.setDoc(st,{start:v})}};
+    setStart:function(v){return F.setDoc(st,{start:v})},
+    getAdmins:function(){return F.getDoc(F.doc(fs,"cfg","admins")).then(function(d){return d.exists()?(d.data().emails||[]):[]})},
+    setAdmins:function(l){return F.setDoc(F.doc(fs,"cfg","admins"),{emails:l})}};
 }
 var STN={"new":"На проверке",ok:"Принята",no:"Отклонена"};
 function refresh(){
@@ -371,10 +379,11 @@ function refresh(){
 }
 function loadAdmin(){
   if(!DB)return;
+  $("ad-own").hidden=!isOwner();renderAdm();
   DB.getStart().then(function(v){$("ad-start").value=v||""}).catch(function(){});
   DB.list(true).then(function(l){
     l.sort(function(x,y){return (y.t||0)-(x.t||0)});
-    $("ad-t").innerHTML='<tr><th>Режим</th><th>Ник</th><th>Напарник</th><th>Почта</th><th>FACEIT</th><th>Статус</th><th></th></tr>'+(l.length?l.map(function(x){
+    $("ad-t").innerHTML='<tr><th>Режим</th><th>Ник</th><th>Напарник</th><th>Почта</th><th>Steam</th><th>Статус</th><th></th></tr>'+(l.length?l.map(function(x){
       var s=x.status||"new",fc=/^https?:\/\//.test(x.faceit||"")?'<a href="'+esc(x.faceit)+'" target="_blank" rel="noopener">профиль</a>':esc(x.faceit);
       return '<tr><td>'+(x.mode==="duo"?"2×2":"1×1")+'</td><td>'+esc(x.nick)+'</td><td>'+esc(x.partner||"—")+'</td><td>'+esc(x.email)+'</td><td>'+fc+'</td><td class="s-'+s+'">'+STN[s]+'</td><td><button class="sm" data-id="'+esc(x.id)+'" data-s="ok">Принять</button><button class="sm" data-id="'+esc(x.id)+'" data-s="no">Отклонить</button><button class="sm" data-id="'+esc(x.id)+'" data-s="del">Удалить</button></td></tr>'}).join(""):'<tr><td colspan="7">Заявок пока нет.</td></tr>');
   }).catch(function(){$("ad-t").innerHTML='<tr><td>Не удалось загрузить заявки.</td></tr>'});
@@ -382,6 +391,18 @@ function loadAdmin(){
 $("ad-t").addEventListener("click",function(e){var b=e.target.closest("button");if(!b||!isAdmin())return;
   (b.dataset.s==="del"?DB.del(b.dataset.id):DB.set(b.dataset.id,b.dataset.s)).then(loadAdmin)});
 $("ad-save").addEventListener("click",function(){var v=$("ad-start").value;DB.setStart(v).then(function(){START=v||null;tick()})});
+function loadAdmins(){DB.getAdmins().then(function(l){ADMINS=l||[];refresh()}).catch(function(){})}
+function renderAdm(){
+  if(!isOwner())return;
+  DB.getAdmins().then(function(l){ADMINS=l||[];$("ad-list").innerHTML=ADMINS.length?ADMINS.map(function(m){return '<div class="field">'+esc(m)+'<button class="sm" data-m="'+esc(m)+'" style="margin-left:auto">Убрать</button></div>'}).join(""):'<p class="note">Других админов нет.</p>'}).catch(function(){})
+}
+$("ad-add").addEventListener("click",function(){
+  var m=$("ad-new").value.trim().toLowerCase();if(!isOwner()||!/^\S+@\S+\.\S+$/.test(m))return;
+  if(ADMINS.indexOf(m)<0)ADMINS=ADMINS.concat(m);
+  DB.setAdmins(ADMINS).then(function(){$("ad-new").value="";renderAdm()});
+});
+$("ad-list").addEventListener("click",function(e){var b=e.target.closest("button");if(!b||!isOwner())return;
+  ADMINS=ADMINS.filter(function(x){return x!==b.dataset.m});DB.setAdmins(ADMINS).then(renderAdm)});
 var amode="in";
 var ERR={"auth/email-already-in-use":"Эта почта уже зарегистрирована.","auth/invalid-credential":"Неверная почта или пароль.","auth/weak-password":"Пароль слишком короткий (минимум 6 символов).","auth/invalid-email":"Неверная почта.","auth/operation-not-allowed":"В Firebase не включён вход по почте и паролю (Authentication → Sign-in method → Email/Password).","auth/unauthorized-domain":"Домен сайта не добавлен в Authorized domains в Firebase.","auth/network-request-failed":"Нет связи с Firebase.","auth/invalid-api-key":"Неверный apiKey в конфиге Firebase."};
 function aerr(t){$("a-err").textContent=t;$("a-err").hidden=!t}
@@ -401,6 +422,7 @@ tick();setInterval(tick,1000);
   try{DB=FIREBASE?await fbDB():localDB()}catch(e){DB=localDB()}
   $("a-note").textContent=DB.local?"Демо-режим: аккаунты и заявки хранятся только в этом браузере.":"";
   DB.getStart().then(function(v){if(v){START=v;tick()}}).catch(function(){});
+  if(ME)loadAdmins();
   refresh();
 })();
 go("home");
