@@ -111,6 +111,9 @@ footer{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem;color:var(--
 .s-ok{color:#6fd18a}.s-no{color:#e86b6b}
 .note{color:var(--muted);font-size:.9rem;margin:0}
 .m span.pend{opacity:.55}
+.m span[draggable=true]{cursor:grab;user-select:none}
+.m span[draggable=true]:active,.m span.drag{outline:2px solid var(--or);outline-offset:2px}
+.m span.over{outline:2px dashed var(--or);outline-offset:2px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
 .stat{padding:.8rem 1rem;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .stat b{display:block;font:800 1.7rem var(--head);color:var(--or)}
@@ -213,6 +216,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <label class="fld"><span>Ник</span><input id="f-nick" type="text" autocomplete="nickname"></label>
     <label class="fld" id="pf" hidden><span>Ник напарника</span><input id="f-partner" type="text"></label>
     <label class="fld"><span>Почта</span><input id="f-mail" type="email" autocomplete="email"></label>
+    <label class="fld" id="f-pwf"><span>Пароль для аккаунта (от 6 символов)</span><input id="f-pw" type="password" autocomplete="new-password"></label>
     <label class="fld"><span>Профиль Steam (ссылка)</span><input id="f-faceit" type="url" placeholder="https://steamcommunity.com/id/..."></label>
     <p class="err" id="f-err" hidden></p>
     <button class="btn main" id="send">Отправить заявку</button>
@@ -337,11 +341,11 @@ document.getElementById("send").addEventListener("click",function(){
   if(!/steamcommunity\.com\//i.test(fc)){err.textContent="Вставьте ссылку на профиль Steam (steamcommunity.com/...).";err.hidden=false;return}
   err.hidden=true;
   var text="Заявка на турнир ART AHLTV\nРежим: "+(fmode==="duo"?"2×2":"1×1")+"\nНик: "+nick+(fmode==="duo"?"\nНапарник: "+pt:"")+"\nПочта: "+mail+"\nSteam: "+fc;
-  if(!ME){err.textContent="Сначала войдите в аккаунт.";err.hidden=false;go("account");return}
-  DB.list(false).then(function(l){if(l.some(function(x){return x.mode===fmode}))throw "dup";return DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()})}).then(function(){
+  var pw=document.getElementById("f-pw").value,pre=ME?Promise.resolve():(pw.length<6?Promise.reject("pw"):DB.signup(mail.toLowerCase(),pw).catch(function(e){if((e&&e.code==="auth/email-already-in-use")||e==="Эта почта уже зарегистрирована.")return DB.login(mail.toLowerCase(),pw);throw e}));
+  pre.then(function(){return DB.list(false)}).then(function(l){if(l.some(function(x){return x.mode===fmode}))throw "dup";return DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()})}).then(function(){
     document.getElementById("txt").textContent=text;
     document.getElementById("res").hidden=false;refresh();fillBr();if(!PROF.nick)DB.setProfile({nick:nick,steam:fc}).then(loadProfile).catch(function(){});go("bracket");
-  }).catch(function(e){err.textContent=(e==="dup"||(e&&e.code==="permission-denied"))?"Вы уже зарегистрированы в этом режиме.":"Не удалось отправить заявку.";err.hidden=false});
+  }).catch(function(e){err.textContent=e==="pw"?"Придумайте пароль от 6 символов для аккаунта.":(e==="dup"||(e&&e.code==="permission-denied"))?"Вы уже зарегистрированы в этом режиме.":(ERR[e&&e.code]||(typeof e==="string"?e:"Не удалось отправить заявку."));err.hidden=false});
 });
 document.getElementById("tg").addEventListener("click",function(){
   try{navigator.clipboard.writeText(document.getElementById("txt").textContent)}catch(e){}
@@ -372,6 +376,7 @@ function localDB(){
     topStats:function(){var s=ls("ah_stats",{});return Promise.resolve(Object.keys(s).map(function(k){return s[k]}))},
     addStat:function(u,k,d,n){var s=ls("ah_stats",{}),x=s[u]||{matches:0,kills:0,deaths:0};if(n)x.nick=n;x.matches++;x.kills+=k;x.deaths+=d;s[u]=x;sv("ah_stats",s);return Promise.resolve()},
     resetStat:function(u){var s=ls("ah_stats",{});s[u]={matches:0,kills:0,deaths:0};sv("ah_stats",s);return Promise.resolve()},
+    place:function(id,m,p){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id){a.mode=m;a.pos=p}});sv("ah_apps",l);return Promise.resolve()},
     move:function(id,m){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.mode=m});sv("ah_apps",l);return Promise.resolve()},
     list:function(all){var l=ls("ah_apps",[]);return Promise.resolve(all?l:l.filter(function(a){return a.uid===ME.uid}))},
     set:function(id,s){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.status=s});sv("ah_apps",l);return Promise.resolve()},
@@ -389,11 +394,11 @@ async function fbDB(){
   U.onAuthStateChanged(au,function(u){setMe(u?{uid:u.uid,email:(u.email||"").toLowerCase()}:null)});
   var ap=F.collection(fs,"apps"),st=F.doc(fs,"cfg","main");
   return {
-    signup:function(m,p){return U.createUserWithEmailAndPassword(au,m,p)},
-    login:function(m,p){return U.signInWithEmailAndPassword(au,m,p)},
+    signup:function(m,p){return U.createUserWithEmailAndPassword(au,m,p).then(function(c){setMe({uid:c.user.uid,email:(c.user.email||"").toLowerCase()})})},
+    login:function(m,p){return U.signInWithEmailAndPassword(au,m,p).then(function(c){setMe({uid:c.user.uid,email:(c.user.email||"").toLowerCase()})})},
     logout:function(){return U.signOut(au)},
     add:function(a){var id=a.id||(a.uid+"_"+a.mode),s={uid:a.uid,mode:a.mode,nick:a.nick,partner:a.partner,status:a.status||"new",t:a.t};return F.setDoc(F.doc(fs,"apps",id),a).then(function(){return F.setDoc(F.doc(fs,"slots",id),s)})},
-    slots:function(){return F.getDocs(F.collection(fs,"slots")).then(function(s){return s.docs.map(function(d){return d.data()})})},
+    slots:function(){return F.getDocs(F.collection(fs,"slots")).then(function(s){return s.docs.map(function(d){var x=d.data();x.id=d.id;return x})})},
     list:function(all){var q=all?ap:F.query(ap,F.where("uid","==",ME.uid));return F.getDocs(q).then(function(s){return s.docs.map(function(d){var x=d.data();x.id=d.id;return x})})},
     set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{status:s}).catch(function(){})})},
     getProfile:function(){return F.getDoc(F.doc(fs,"profiles",ME.uid)).then(function(d){return d.exists()?d.data():null})},
@@ -402,6 +407,7 @@ async function fbDB(){
     addStat:function(u,k,d,n){return F.setDoc(F.doc(fs,"stats",u),{nick:n||"",matches:F.increment(1),kills:F.increment(k),deaths:F.increment(d)},{merge:true})},
     topStats:function(){return F.getDocs(F.collection(fs,"stats")).then(function(s){return s.docs.map(function(d){return d.data()})})},
     resetStat:function(u){return F.setDoc(F.doc(fs,"stats",u),{matches:0,kills:0,deaths:0})},
+    place:function(id,m,p){return F.updateDoc(F.doc(fs,"slots",id),{mode:m,pos:p}).then(function(){return F.updateDoc(F.doc(fs,"apps",id),{mode:m}).catch(function(){})})},
     move:function(id,m){return F.updateDoc(F.doc(fs,"apps",id),{mode:m}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{mode:m}).catch(function(){})})},
     del:function(id){return F.deleteDoc(F.doc(fs,"apps",id)).then(function(){return F.deleteDoc(F.doc(fs,"slots",id)).catch(function(){})})},
     getStart:function(){return F.getDoc(st).then(function(d){return d.exists()?d.data().start:null})},
@@ -413,7 +419,7 @@ var STN={"new":"На проверке",ok:"Принята",no:"Отклонен�
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
   var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=true;
-  $("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
+  $("f-pwf").hidden=!!ME;$("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
     DB.list(false).then(function(l){$("a-apps").innerHTML=l.length?l.map(function(x){return '<div class="field">'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick)+' · '+STN[x.status||"new"]+'</div>'}).join(""):'<p class="note">Заявок пока нет.</p>'}).catch(function(){});
@@ -497,16 +503,38 @@ $("st-add").addEventListener("click",function(){var u=$("st-p").value,k=parseInt
   if(!u||!isAdmin()||isNaN(k)||isNaN(d)||k<0||d<0){$("st-msg").textContent="Выберите игрока и введите убийства и смерти.";return}
   DB.addStat(u,k,d,$("st-p").selectedOptions[0].dataset.n).then(function(){$("st-k").value="";$("st-d").value="";$("st-msg").textContent="Матч добавлен."}).catch(function(){$("st-msg").textContent="Не удалось сохранить."})});
 $("st-reset").addEventListener("click",function(){var u=$("st-p").value;if(!u||!isAdmin()||!confirm("Обнулить статистику игрока?"))return;DB.resetStat(u).then(function(){$("st-msg").textContent="Статистика обнулена."})});
+var ARR={solo:[],duo:[]},DRAG=null;
+function bindDrag(box,md){
+  box.querySelector(".rd").querySelectorAll(".m > span").forEach(function(c,i){
+    if(!isAdmin())return;
+    if(ARR[md][i]){c.draggable=true;
+      c.addEventListener("dragstart",function(e){DRAG={md:md,i:i};c.classList.add("drag");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","x")});
+      c.addEventListener("dragend",function(){c.classList.remove("drag")})}
+    c.addEventListener("dragover",function(e){if(DRAG){e.preventDefault();c.classList.add("over")}});
+    c.addEventListener("dragleave",function(){c.classList.remove("over")});
+    c.addEventListener("drop",function(e){e.preventDefault();c.classList.remove("over");if(DRAG)dropTo(md,i)});
+  });
+}
+function dropTo(m2,i2){
+  var s=DRAG;DRAG=null;if(!isAdmin()||(s.md===m2&&s.i===i2))return;
+  var A=ARR[s.md],B=ARR[m2],a=A[s.i],b=B[i2];A[s.i]=b;B[i2]=a;var ps=[];
+  [s.md,m2].filter(function(m,k,r){return r.indexOf(m)===k}).forEach(function(m){ARR[m].forEach(function(x,j){if(x&&(x.pos!==j||(x.mode==="duo"?"duo":"solo")!==m))ps.push(DB.place(x.id,m,j))})});
+  Promise.all(ps).then(function(){fillBr()}).catch(function(){fillBr()});
+}
 function fillBr(){
   ["solo","duo"].forEach(function(md){bracket(16,$("br-"+md))});
   if(!DB)return;
   DB.slots().then(function(l){
     ["solo","duo"].forEach(function(md){
       var box=$("br-"+md);bracket(16,box);
-      var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md&&x.status!=="no"}).sort(function(x,y){return (x.t||0)-(y.t||0)}).slice(0,16);
+      var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md&&x.status!=="no"}).sort(function(x,y){return (x.t||0)-(y.t||0)});
+      var arr=new Array(16).fill(null),rest=[];
+      a.forEach(function(x){var p=x.pos;if(typeof p==="number"&&p>=0&&p<16&&!arr[p])arr[p]=x;else rest.push(x)});
+      rest.forEach(function(x){var j=arr.indexOf(null);if(j>=0)arr[j]=x});ARR[md]=arr;
       var cells=box.querySelector(".rd").querySelectorAll(".m > span");
-      a.forEach(function(x,i){var c=cells[i];if(!c)return;c.classList.toggle("pend",x.status!=="ok");
+      arr.forEach(function(x,i){var c=cells[i];if(!c||!x)return;c.classList.toggle("pend",x.status!=="ok");
         if(md==="duo"){var s=c.querySelectorAll("i");s[0].textContent=x.nick;s[1].textContent=x.partner||"—"}else c.textContent=x.nick});
+      bindDrag(box,md);
     });
   }).catch(function(){});
 }
