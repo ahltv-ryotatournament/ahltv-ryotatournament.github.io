@@ -407,7 +407,7 @@ async function fbDB(){
 var STN={"new":"На проверке",ok:"Принята",no:"Отклонена"};
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
-  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=!a;$("a-reg").hidden=!a;$("a-apps").hidden=!a;
+  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=true;
   $("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
