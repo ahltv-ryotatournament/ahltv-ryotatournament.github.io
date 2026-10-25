@@ -481,7 +481,7 @@ function loadTop(){
   DB.topStats().then(function(l){
     function r(v){return Math.round(v*100)/100}
     l=l.filter(function(x){return x.matches>0}).map(function(x){x.kd=x.deaths?x.kills/x.deaths:x.kills;return x}).sort(function(a,b){return b.kd-a.kd}).slice(0,20);
-    $("top-t").innerHTML='<tr><th>#</th><th>Ник</th><th>Матчи</th><th>Ср. убийства</th><th>Ср. смерти</th><th>K/D</th></tr>'+(l.length?l.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(x.nick||"—")+'</td><td>'+x.matches+'</td><td>'+r(x.kills/x.matches)+'</td><td>'+r(x.deaths/x.matches)+'</td><td>'+r(x.kd)+'</td></tr>'}).join(""):'<tr><td colspan="6">Статистики пока нет.</td></tr>');
+    $("top-t").innerHTML='<tr><th>#</th><th>Ник</th><th>Убийства</th><th>Смерти</th><th>K/D</th></tr>'+(l.length?l.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(x.nick||"—")+'</td><td>'+x.kills+'</td><td>'+x.deaths+'</td><td>'+r(x.kd)+'</td></tr>'}).join(""):'<tr><td colspan="5">Статистики пока нет.</td></tr>');
   }).catch(function(){$("top-t").innerHTML='<tr><td>Не удалось загрузить рейтинг.</td></tr>'});
 }
 var PROF={};
