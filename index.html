@@ -125,6 +125,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
   <button class="logo" data-go="home"><small>TIER 7 COUNTER-STRIKE</small><b>AHLTV</b></button>
   <nav>
     <button data-go="home">Главная</button>
+    <button data-go="top">Топ игроков</button>
     <button data-go="tour">Турниры</button>
     <button data-go="format">Формат</button>
     <button data-go="bracket">Сетка</button>
@@ -241,6 +242,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
       <div class="btns"><button class="btn" data-go="apply" id="a-reg">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div>
     </div>
   </section>
+  <section id="top"><p class="eyebrow">Рейтинг</p><h1>Топ игроков</h1><div class="tw"><table class="tbl" id="top-t"></table></div></section>
   <section id="admin"><p class="eyebrow">Управление</p><h1>Админка</h1>
     <div class="seg" id="ad-tabs"><button class="on" data-t="tours">Турниры</button><button data-t="set">Настройки</button></div>
     <div id="ad-set" hidden><div class="acc"><label class="fld"><span>Дата и время старта турнира</span><input id="ad-start" type="datetime-local"></label><button class="btn" id="ad-save">Сохранить дату</button></div>
@@ -277,6 +279,7 @@ function go(id){
   if(id==="admin"&&!isAdmin())id="account";
   if(id==="admin")loadAdmin();
   if(id==="bracket")fillBr();
+  if(id==="top")loadTop();
   document.querySelectorAll("section").forEach(function(s){s.classList.toggle("on",s.id===id)});
   document.querySelectorAll("nav button").forEach(function(b){b.classList.toggle("on",b.dataset.go===id && !b.classList.contains("cta") && !b.classList.contains("ghost"))});
   window.scrollTo(0,0);
@@ -366,7 +369,8 @@ function localDB(){
     getProfile:function(){return Promise.resolve(ls("ah_prof_"+ME.uid,null))},
     setProfile:function(p){sv("ah_prof_"+ME.uid,p);var l=ls("ah_apps",[]);l.forEach(function(a){if(a.uid===ME.uid)a.nick=p.nick});sv("ah_apps",l);return Promise.resolve()},
     getStats:function(){return Promise.resolve(ls("ah_stats",{})[ME.uid]||null)},
-    addStat:function(u,k,d){var s=ls("ah_stats",{}),x=s[u]||{matches:0,kills:0,deaths:0};x.matches++;x.kills+=k;x.deaths+=d;s[u]=x;sv("ah_stats",s);return Promise.resolve()},
+    topStats:function(){var s=ls("ah_stats",{});return Promise.resolve(Object.keys(s).map(function(k){return s[k]}))},
+    addStat:function(u,k,d,n){var s=ls("ah_stats",{}),x=s[u]||{matches:0,kills:0,deaths:0};if(n)x.nick=n;x.matches++;x.kills+=k;x.deaths+=d;s[u]=x;sv("ah_stats",s);return Promise.resolve()},
     resetStat:function(u){var s=ls("ah_stats",{});s[u]={matches:0,kills:0,deaths:0};sv("ah_stats",s);return Promise.resolve()},
     move:function(id,m){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.mode=m});sv("ah_apps",l);return Promise.resolve()},
     list:function(all){var l=ls("ah_apps",[]);return Promise.resolve(all?l:l.filter(function(a){return a.uid===ME.uid}))},
@@ -395,7 +399,8 @@ async function fbDB(){
     getProfile:function(){return F.getDoc(F.doc(fs,"profiles",ME.uid)).then(function(d){return d.exists()?d.data():null})},
     setProfile:function(p){return F.setDoc(F.doc(fs,"profiles",ME.uid),p).then(function(){return Promise.all(["solo","duo"].map(function(m){return F.updateDoc(F.doc(fs,"apps",ME.uid+"_"+m),{nick:p.nick}).then(function(){return F.updateDoc(F.doc(fs,"slots",ME.uid+"_"+m),{nick:p.nick})}).catch(function(){})}))})},
     getStats:function(){return F.getDoc(F.doc(fs,"stats",ME.uid)).then(function(d){return d.exists()?d.data():null})},
-    addStat:function(u,k,d){return F.setDoc(F.doc(fs,"stats",u),{matches:F.increment(1),kills:F.increment(k),deaths:F.increment(d)},{merge:true})},
+    addStat:function(u,k,d,n){return F.setDoc(F.doc(fs,"stats",u),{nick:n||"",matches:F.increment(1),kills:F.increment(k),deaths:F.increment(d)},{merge:true})},
+    topStats:function(){return F.getDocs(F.collection(fs,"stats")).then(function(s){return s.docs.map(function(d){return d.data()})})},
     resetStat:function(u){return F.setDoc(F.doc(fs,"stats",u),{matches:0,kills:0,deaths:0})},
     move:function(id,m){return F.updateDoc(F.doc(fs,"apps",id),{mode:m}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{mode:m}).catch(function(){})})},
     del:function(id){return F.deleteDoc(F.doc(fs,"apps",id)).then(function(){return F.deleteDoc(F.doc(fs,"slots",id)).catch(function(){})})},
@@ -420,7 +425,7 @@ function loadAdmin(){
   $("ad-own").hidden=!isOwner();renderAdm();
   DB.getStart().then(function(v){$("ad-start").value=v||""}).catch(function(){});
   DB.list(true).then(function(l){
-    var seen={},opts="";l.forEach(function(x){if(x.uid&&x.uid!=="admin"&&!seen[x.uid]){seen[x.uid]=1;opts+='<option value="'+esc(x.uid)+'">'+esc(x.nick)+' ('+esc(x.email)+')</option>'}});var sel=$("st-p"),cur=sel.value;sel.innerHTML=opts;if(cur)sel.value=cur;
+    var seen={},opts="";l.forEach(function(x){if(x.uid&&x.uid!=="admin"&&!seen[x.uid]){seen[x.uid]=1;opts+='<option value="'+esc(x.uid)+'" data-n="'+esc(x.nick)+'">'+esc(x.nick)+' ('+esc(x.email)+')</option>'}});var sel=$("st-p"),cur=sel.value;sel.innerHTML=opts;if(cur)sel.value=cur;
     var ord={"new":0,ok:1,no:2};
     $("ad-t").innerHTML=["solo","duo"].map(function(md){
       var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md});
@@ -465,6 +470,14 @@ document.querySelectorAll("#ap-mode button").forEach(function(b){b.addEventListe
 $("ap-add").addEventListener("click",function(){
   var n=$("ap-nick").value.trim();if(!n||!isAdmin())return;
   DB.add({id:"m"+Date.now(),uid:"admin",email:"добавлено админом",mode:apm,nick:n,partner:apm==="duo"?$("ap-partner").value.trim():"",faceit:$("ap-steam").value.trim(),status:"ok",t:Date.now()}).then(function(){$("ap-nick").value="";$("ap-partner").value="";$("ap-steam").value="";loadAdmin()})});
+function loadTop(){
+  if(!DB){$("top-t").innerHTML='<tr><td>Загрузка…</td></tr>';return}
+  DB.topStats().then(function(l){
+    function r(v){return Math.round(v*100)/100}
+    l=l.filter(function(x){return x.matches>0}).map(function(x){x.kd=x.deaths?x.kills/x.deaths:x.kills;return x}).sort(function(a,b){return b.kd-a.kd}).slice(0,20);
+    $("top-t").innerHTML='<tr><th>#</th><th>Ник</th><th>Матчи</th><th>Ср. убийства</th><th>Ср. смерти</th><th>K/D</th></tr>'+(l.length?l.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(x.nick||"—")+'</td><td>'+x.matches+'</td><td>'+r(x.kills/x.matches)+'</td><td>'+r(x.deaths/x.matches)+'</td><td>'+r(x.kd)+'</td></tr>'}).join(""):'<tr><td colspan="6">Статистики пока нет.</td></tr>');
+  }).catch(function(){$("top-t").innerHTML='<tr><td>Не удалось загрузить рейтинг.</td></tr>'});
+}
 var PROF={};
 function plink(){var u=PROF.steam||"";$("p-link").innerHTML=/^https?:\/\//.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Открыть профиль Steam</a>':"Steam не указан."}
 function loadProfile(){
@@ -482,7 +495,7 @@ $("p-save").addEventListener("click",function(){
 });
 $("st-add").addEventListener("click",function(){var u=$("st-p").value,k=parseInt($("st-k").value,10),d=parseInt($("st-d").value,10);
   if(!u||!isAdmin()||isNaN(k)||isNaN(d)||k<0||d<0){$("st-msg").textContent="Выберите игрока и введите убийства и смерти.";return}
-  DB.addStat(u,k,d).then(function(){$("st-k").value="";$("st-d").value="";$("st-msg").textContent="Матч добавлен."}).catch(function(){$("st-msg").textContent="Не удалось сохранить."})});
+  DB.addStat(u,k,d,$("st-p").selectedOptions[0].dataset.n).then(function(){$("st-k").value="";$("st-d").value="";$("st-msg").textContent="Матч добавлен."}).catch(function(){$("st-msg").textContent="Не удалось сохранить."})});
 $("st-reset").addEventListener("click",function(){var u=$("st-p").value;if(!u||!isAdmin()||!confirm("Обнулить статистику игрока?"))return;DB.resetStat(u).then(function(){$("st-msg").textContent="Статистика обнулена."})});
 function fillBr(){
   ["solo","duo"].forEach(function(md){bracket(16,$("br-"+md))});
