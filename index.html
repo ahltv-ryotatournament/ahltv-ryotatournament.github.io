@@ -238,7 +238,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
         <p class="note" id="p-link"></p><button class="btn" id="p-save">Сохранить</button></div>
       <div class="stats" id="p-stats"></div>
       <div class="acc" id="a-apps" style="margin:0"></div>
-      <div class="btns"><button class="btn" data-go="apply">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div>
+      <div class="btns"><button class="btn" data-go="apply" id="a-reg">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div>
     </div>
   </section>
   <section id="admin"><p class="eyebrow">Управление</p><h1>Админка</h1>
@@ -407,7 +407,7 @@ async function fbDB(){
 var STN={"new":"На проверке",ok:"Принята",no:"Отклонена"};
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
-  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=!a;
+  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=!a;$("a-reg").hidden=!a;$("a-apps").hidden=!a;
   $("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
