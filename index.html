@@ -111,6 +111,11 @@ footer{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem;color:var(--
 .s-ok{color:#6fd18a}.s-no{color:#e86b6b}
 .note{color:var(--muted);font-size:.9rem;margin:0}
 .m span.pend{opacity:.55}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+.stat{padding:.8rem 1rem;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.stat b{display:block;font:800 1.7rem var(--head);color:var(--or)}
+.stat span{font:700 .66rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.fld select{width:100%;padding:.9rem 1rem;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit}
 h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
 @media (max-width:820px){.hero{grid-template-columns:1fr}.stats{gap:.7rem;border:0;padding:0}main{padding-top:2.5rem}}
 </style>
@@ -125,8 +130,8 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <button data-go="bracket">Сетка</button>
     <button data-go="rules">Правила</button>
     <button class="ghost" data-go="admin" id="nav-admin" hidden>Админка</button>
-    <button class="ghost" data-go="account">Аккаунт</button>
-    <button class="cta" data-go="apply">Регистрация</button>
+    <button class="ghost" data-go="account" id="nav-acc">Аккаунт</button>
+    <button class="cta" data-go="apply" id="nav-cta">Регистрация</button>
   </nav>
 </div></header>
 <main>
@@ -228,8 +233,12 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     </div>
     <div class="acc" id="a-in" hidden>
       <div class="field" id="a-me"></div>
+      <div class="acc" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
+        <label class="fld"><span>Steam (ссылка)</span><input id="p-steam" type="url" placeholder="https://steamcommunity.com/id/..."></label>
+        <p class="note" id="p-link"></p><button class="btn" id="p-save">Сохранить</button></div>
+      <div class="stats" id="p-stats"></div>
       <div class="acc" id="a-apps" style="margin:0"></div>
-      <div class="btns"><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div>
+      <div class="btns"><button class="btn" data-go="apply">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div>
     </div>
   </section>
   <section id="admin"><p class="eyebrow">Управление</p><h1>Админка</h1>
@@ -244,6 +253,11 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
       <label class="fld" id="ap-pf" hidden><span>Напарник</span><input id="ap-partner"></label>
       <label class="fld"><span>Ссылка Steam (необязательно)</span><input id="ap-steam"></label>
       <button class="btn" id="ap-add">Добавить в сетку</button></div>
+    <div class="acc"><h2 class="ah" style="margin:0">Статистика игрока</h2>
+      <label class="fld"><span>Игрок</span><select id="st-p"></select></label>
+      <label class="fld"><span>Убийства в матче</span><input id="st-k" type="number" min="0"></label>
+      <label class="fld"><span>Смерти в матче</span><input id="st-d" type="number" min="0"></label>
+      <div class="btns"><button class="btn" id="st-add">Добавить матч</button><button class="btn" id="st-reset">Обнулить игрока</button></div><p class="note" id="st-msg"></p></div>
     <div id="ad-t"></div></div>
   </section>
   <section id="contact"><p class="eyebrow">Связь</p><h1>Связаться</h1>
@@ -323,7 +337,7 @@ document.getElementById("send").addEventListener("click",function(){
   if(!ME){err.textContent="Сначала войдите в аккаунт.";err.hidden=false;go("account");return}
   DB.list(false).then(function(l){if(l.some(function(x){return x.mode===fmode}))throw "dup";return DB.add({uid:ME.uid,email:mail,mode:fmode,nick:nick,partner:fmode==="duo"?pt:"",faceit:fc,status:"new",t:Date.now()})}).then(function(){
     document.getElementById("txt").textContent=text;
-    document.getElementById("res").hidden=false;refresh();fillBr();go("bracket");
+    document.getElementById("res").hidden=false;refresh();fillBr();if(!PROF.nick)DB.setProfile({nick:nick,steam:fc}).then(loadProfile).catch(function(){});go("bracket");
   }).catch(function(e){err.textContent=(e==="dup"||(e&&e.code==="permission-denied"))?"Вы уже зарегистрированы в этом режиме.":"Не удалось отправить заявку.";err.hidden=false});
 });
 document.getElementById("tg").addEventListener("click",function(){
@@ -336,7 +350,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return
 function ls(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function hash(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(String(s.split("").reduce(function(a,c){return (a*31+c.charCodeAt(0))|0},7)));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.from(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
-function setMe(u){ME=u;ADMINS=[];refresh();if(u&&DB)loadAdmins()}
+function setMe(u){ME=u;ADMINS=[];refresh();if(u&&DB){loadAdmins();loadProfile()}}
 function isOwner(){return !!ME&&(ADMIN_EMAIL?ME.email===ADMIN_EMAIL.toLowerCase():!!(DB&&DB.local&&ME.uid==="u1"))}
 function isAdmin(){return isOwner()||(!!ME&&ADMINS.indexOf(ME.email)>-1)}
 // Демо-режим: всё хранится в localStorage этого браузера
@@ -349,6 +363,11 @@ function localDB(){
     logout:function(){sv("ah_me",null);setMe(null);return Promise.resolve()},
     add:function(a){var l=ls("ah_apps",[]);a.id=a.id||(a.uid+"_"+a.mode);if(l.some(function(x){return x.id===a.id}))return Promise.reject("dup");l.push(a);sv("ah_apps",l);return Promise.resolve()},
     slots:function(){return Promise.resolve(ls("ah_apps",[]))},
+    getProfile:function(){return Promise.resolve(ls("ah_prof_"+ME.uid,null))},
+    setProfile:function(p){sv("ah_prof_"+ME.uid,p);var l=ls("ah_apps",[]);l.forEach(function(a){if(a.uid===ME.uid)a.nick=p.nick});sv("ah_apps",l);return Promise.resolve()},
+    getStats:function(){return Promise.resolve(ls("ah_stats",{})[ME.uid]||null)},
+    addStat:function(u,k,d){var s=ls("ah_stats",{}),x=s[u]||{matches:0,kills:0,deaths:0};x.matches++;x.kills+=k;x.deaths+=d;s[u]=x;sv("ah_stats",s);return Promise.resolve()},
+    resetStat:function(u){var s=ls("ah_stats",{});s[u]={matches:0,kills:0,deaths:0};sv("ah_stats",s);return Promise.resolve()},
     move:function(id,m){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.mode=m});sv("ah_apps",l);return Promise.resolve()},
     list:function(all){var l=ls("ah_apps",[]);return Promise.resolve(all?l:l.filter(function(a){return a.uid===ME.uid}))},
     set:function(id,s){var l=ls("ah_apps",[]);l.forEach(function(a){if(a.id===id)a.status=s});sv("ah_apps",l);return Promise.resolve()},
@@ -373,6 +392,11 @@ async function fbDB(){
     slots:function(){return F.getDocs(F.collection(fs,"slots")).then(function(s){return s.docs.map(function(d){return d.data()})})},
     list:function(all){var q=all?ap:F.query(ap,F.where("uid","==",ME.uid));return F.getDocs(q).then(function(s){return s.docs.map(function(d){var x=d.data();x.id=d.id;return x})})},
     set:function(id,s){return F.updateDoc(F.doc(fs,"apps",id),{status:s}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{status:s}).catch(function(){})})},
+    getProfile:function(){return F.getDoc(F.doc(fs,"profiles",ME.uid)).then(function(d){return d.exists()?d.data():null})},
+    setProfile:function(p){return F.setDoc(F.doc(fs,"profiles",ME.uid),p).then(function(){return Promise.all(["solo","duo"].map(function(m){return F.updateDoc(F.doc(fs,"apps",ME.uid+"_"+m),{nick:p.nick}).then(function(){return F.updateDoc(F.doc(fs,"slots",ME.uid+"_"+m),{nick:p.nick})}).catch(function(){})}))})},
+    getStats:function(){return F.getDoc(F.doc(fs,"stats",ME.uid)).then(function(d){return d.exists()?d.data():null})},
+    addStat:function(u,k,d){return F.setDoc(F.doc(fs,"stats",u),{matches:F.increment(1),kills:F.increment(k),deaths:F.increment(d)},{merge:true})},
+    resetStat:function(u){return F.setDoc(F.doc(fs,"stats",u),{matches:0,kills:0,deaths:0})},
     move:function(id,m){return F.updateDoc(F.doc(fs,"apps",id),{mode:m}).then(function(){return F.updateDoc(F.doc(fs,"slots",id),{mode:m}).catch(function(){})})},
     del:function(id){return F.deleteDoc(F.doc(fs,"apps",id)).then(function(){return F.deleteDoc(F.doc(fs,"slots",id)).catch(function(){})})},
     getStart:function(){return F.getDoc(st).then(function(d){return d.exists()?d.data().start:null})},
@@ -384,6 +408,7 @@ var STN={"new":"На проверке",ok:"Принята",no:"Отклонен�
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
   var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=!a;
+  $("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
     DB.list(false).then(function(l){$("a-apps").innerHTML=l.length?l.map(function(x){return '<div class="field">'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick)+' · '+STN[x.status||"new"]+'</div>'}).join(""):'<p class="note">Заявок пока нет.</p>'}).catch(function(){});
@@ -395,6 +420,7 @@ function loadAdmin(){
   $("ad-own").hidden=!isOwner();renderAdm();
   DB.getStart().then(function(v){$("ad-start").value=v||""}).catch(function(){});
   DB.list(true).then(function(l){
+    var seen={},opts="";l.forEach(function(x){if(x.uid&&x.uid!=="admin"&&!seen[x.uid]){seen[x.uid]=1;opts+='<option value="'+esc(x.uid)+'">'+esc(x.nick)+' ('+esc(x.email)+')</option>'}});var sel=$("st-p"),cur=sel.value;sel.innerHTML=opts;if(cur)sel.value=cur;
     var ord={"new":0,ok:1,no:2};
     $("ad-t").innerHTML=["solo","duo"].map(function(md){
       var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md});
@@ -439,6 +465,25 @@ document.querySelectorAll("#ap-mode button").forEach(function(b){b.addEventListe
 $("ap-add").addEventListener("click",function(){
   var n=$("ap-nick").value.trim();if(!n||!isAdmin())return;
   DB.add({id:"m"+Date.now(),uid:"admin",email:"добавлено админом",mode:apm,nick:n,partner:apm==="duo"?$("ap-partner").value.trim():"",faceit:$("ap-steam").value.trim(),status:"ok",t:Date.now()}).then(function(){$("ap-nick").value="";$("ap-partner").value="";$("ap-steam").value="";loadAdmin()})});
+var PROF={};
+function plink(){var u=PROF.steam||"";$("p-link").innerHTML=/^https?:\/\//.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Открыть профиль Steam</a>':"Steam не указан."}
+function loadProfile(){
+  DB.getProfile().then(function(p){PROF=p||{};$("p-nick").value=PROF.nick||"";$("p-steam").value=PROF.steam||"";
+    if(!$("f-nick").value&&PROF.nick)$("f-nick").value=PROF.nick;
+    if(!$("f-faceit").value&&PROF.steam)$("f-faceit").value=PROF.steam;plink()}).catch(function(){});
+  DB.getStats().then(function(s){s=s||{};var m=s.matches||0,k=s.kills||0,d=s.deaths||0;
+    function r(v){return Math.round(v*100)/100}
+    $("p-stats").innerHTML=[["Матчи",m],["Ср. убийства",m?r(k/m):"—"],["Ср. смерти",m?r(d/m):"—"],["K/D",m?(d?r(k/d):k):"—"]].map(function(x){return '<div class="stat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'}).join("")}).catch(function(){});
+}
+$("p-save").addEventListener("click",function(){
+  var n=$("p-nick").value.trim(),u=$("p-steam").value.trim();
+  if(!n||(u&&!/steamcommunity\.com\//i.test(u))){$("p-link").textContent="Введите ник и ссылку вида steamcommunity.com/...";return}
+  DB.setProfile({nick:n,steam:u}).then(function(){PROF={nick:n,steam:u};plink();$("p-link").insertAdjacentHTML("beforeend"," · сохранено");refresh()}).catch(function(){$("p-link").textContent="Не удалось сохранить."});
+});
+$("st-add").addEventListener("click",function(){var u=$("st-p").value,k=parseInt($("st-k").value,10),d=parseInt($("st-d").value,10);
+  if(!u||!isAdmin()||isNaN(k)||isNaN(d)||k<0||d<0){$("st-msg").textContent="Выберите игрока и введите убийства и смерти.";return}
+  DB.addStat(u,k,d).then(function(){$("st-k").value="";$("st-d").value="";$("st-msg").textContent="Матч добавлен."}).catch(function(){$("st-msg").textContent="Не удалось сохранить."})});
+$("st-reset").addEventListener("click",function(){var u=$("st-p").value;if(!u||!isAdmin()||!confirm("Обнулить статистику игрока?"))return;DB.resetStat(u).then(function(){$("st-msg").textContent="Статистика обнулена."})});
 function fillBr(){
   ["solo","duo"].forEach(function(md){bracket(16,$("br-"+md))});
   if(!DB)return;
@@ -471,7 +516,7 @@ tick();setInterval(tick,1000);
   try{DB=FIREBASE?await fbDB():localDB()}catch(e){DB=localDB()}
   $("a-note").textContent=DB.local?"Демо-режим: аккаунты и заявки хранятся только в этом браузере.":"";
   DB.getStart().then(function(v){if(v){START=v;tick()}}).catch(function(){});
-  if(ME)loadAdmins();
+  if(ME){loadAdmins();loadProfile()}
   fillBr();
   refresh();
 })();
