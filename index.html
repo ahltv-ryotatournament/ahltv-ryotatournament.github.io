@@ -116,6 +116,14 @@ footer{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem;color:var(--
 .m span[draggable=true]{cursor:grab;user-select:none}
 .m span[draggable=true]:active,.m span.drag{outline:2px solid var(--or);outline-offset:2px}
 .m span.over{outline:2px dashed var(--or);outline-offset:2px}
+.m .sc{padding:.35rem .8rem;border-top:1px solid var(--line);font:700 .7rem var(--mono);letter-spacing:.1em;color:var(--or);text-align:center}
+.m .sc.add{color:var(--muted)}
+.m .sc{cursor:default}
+.m span.win{color:#fff;font-weight:700}
+.champ{margin-top:.8rem;font:800 1.1rem var(--head);color:var(--or)}
+.why{color:var(--muted);font-size:.85rem;margin:-.3rem 0 .3rem}
+.why summary{cursor:pointer;color:var(--or);width:fit-content}
+.why p{margin:.5rem 0 0;line-height:1.5}
 .pstats{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
 .pstat{padding:.8rem 1rem;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .pstat b{display:block;font:800 1.7rem var(--head);color:var(--or)}
@@ -218,6 +226,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <label class="fld"><span>Ник</span><input id="f-nick" type="text" autocomplete="nickname"></label>
     <label class="fld" id="pf" hidden><span>Ник напарника</span><input id="f-partner" type="text"></label>
     <label class="fld"><span>Почта</span><input id="f-mail" type="email" autocomplete="email"></label>
+    <details class="why"><summary>Зачем мы просим почту?</summary><p>Почта нужна, чтобы создать ваш аккаунт и входить в него, подтвердить, что это вы (мы отправляем письмо со ссылкой), восстановить пароль и связаться с вами по турниру. Почту видят организатор и админы турнира, данные хранятся в сервисе Google Firebase. Чтобы удалить свои данные, напишите организатору в разделе «Связаться».</p></details>
     <label class="fld" id="f-pwf"><span>Пароль для аккаунта (от 6 символов)</span><input id="f-pw" type="password" autocomplete="new-password"></label>
     <label class="fld"><span>Профиль Steam (ссылка)</span><input id="f-faceit" type="url" placeholder="https://steamcommunity.com/id/..."></label>
     <p class="err" id="f-err" hidden></p>
@@ -233,6 +242,7 @@ h2.ah{font:800 1.4rem var(--head);margin:2rem 0 1rem}
     <div class="acc" id="a-out">
       <div class="seg" id="a-mode"><button class="on" data-a="in">Вход</button><button data-a="up">Регистрация</button></div>
       <label class="fld"><span>Почта</span><input id="a-mail" type="email" autocomplete="email"></label>
+      <details class="why"><summary>Зачем мы просим почту?</summary><p>Почта нужна, чтобы создать ваш аккаунт и входить в него, подтвердить, что это вы (мы отправляем письмо со ссылкой), восстановить пароль и связаться с вами по турниру. Почту видят организатор и админы турнира, данные хранятся в сервисе Google Firebase. Чтобы удалить свои данные, напишите организатору в разделе «Связаться».</p></details>
       <label class="fld"><span>Пароль</span><input id="a-pass" type="password" autocomplete="current-password"></label>
       <p class="err" id="a-err" hidden></p>
       <button class="btn main" id="a-go">Войти</button>
@@ -375,6 +385,8 @@ function localDB(){
     add:function(a){var l=ls("ah_apps",[]);a.id=a.id||(a.uid+"_"+a.mode);if(l.some(function(x){return x.id===a.id}))return Promise.reject("dup");l.push(a);sv("ah_apps",l);return Promise.resolve()},
     slots:function(){return Promise.resolve(ls("ah_apps",[]))},
     verified:function(){return Promise.resolve(null)},
+    results:function(){return Promise.resolve(ls("ah_results",{}))},
+    setScore:function(md,k,v){var r=ls("ah_results",{});r[md]=r[md]||{};if(v)r[md][k]=v;else delete r[md][k];sv("ah_results",r);return Promise.resolve()},
     reset:function(){return Promise.reject("В демо-режиме восстановление пароля недоступно.")},
     getProfile:function(){return Promise.resolve(ls("ah_prof_"+ME.uid,null))},
     setProfile:function(p){sv("ah_prof_"+ME.uid,p);var l=ls("ah_apps",[]);l.forEach(function(a){if(a.uid===ME.uid)a.nick=p.nick});sv("ah_apps",l);return Promise.resolve()},
@@ -404,6 +416,8 @@ async function fbDB(){
     verified:function(){var u=au.currentUser;if(!u)return Promise.resolve(null);return u.reload().then(function(){return u.emailVerified}).catch(function(){return null})},
     resend:function(){return U.sendEmailVerification(au.currentUser)},
     reset:function(m){return U.sendPasswordResetEmail(au,m)},
+    results:function(){return F.getDocs(F.collection(fs,"results")).then(function(s){var o={};s.docs.forEach(function(d){o[d.id]=d.data().s||{}});return o})},
+    setScore:function(md,k,v){var o={};o[k]=v?v:F.deleteField();return F.setDoc(F.doc(fs,"results",md),{s:o},{merge:true})},
     login:function(m,p){return U.signInWithEmailAndPassword(au,m,p).then(function(c){setMe({uid:c.user.uid,email:(c.user.email||"").toLowerCase()})})},
     logout:function(){return U.signOut(au)},
     add:function(a){var id=a.id||(a.uid+"_"+a.mode),s={uid:a.uid,mode:a.mode,nick:a.nick,partner:a.partner,status:a.status||"new",t:a.t};return F.setDoc(F.doc(fs,"apps",id),a).then(function(){return F.setDoc(F.doc(fs,"slots",id),s)})},
@@ -427,7 +441,7 @@ async function fbDB(){
 var STN={"new":"На проверке",ok:"Принята",no:"Отклонена"};
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
-  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=true;
+  var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=false;
   $("f-pwf").hidden=!!ME;$("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
@@ -514,6 +528,36 @@ $("st-add").addEventListener("click",function(){var u=$("st-p").value,k=parseInt
   if(!u||!isAdmin()||isNaN(k)||isNaN(d)||k<0||d<0){$("st-msg").textContent="Выберите игрока и введите убийства и смерти.";return}
   DB.addStat(u,k,d,$("st-p").selectedOptions[0].dataset.n).then(function(){$("st-k").value="";$("st-d").value="";$("st-msg").textContent="Матч добавлен."}).catch(function(){$("st-msg").textContent="Не удалось сохранить."})});
 $("st-reset").addEventListener("click",function(){var u=$("st-p").value;if(!u||!isAdmin()||!confirm("Обнулить статистику игрока?"))return;DB.resetStat(u).then(function(){$("st-msg").textContent="Статистика обнулена."})});
+function fillCell(c,x,md){
+  c.classList.toggle("pend",!!x&&x.status!=="ok");
+  if(md==="duo"){var s=c.querySelectorAll("i");s[0].textContent=x?x.nick:"—";s[1].textContent=x?(x.partner||"—"):"—"}else c.textContent=x?x.nick:"—";
+}
+function applyRes(box,md,arr,sc){
+  var rds=box.querySelectorAll(".rd"),R=rds.length,cur=arr.slice();
+  rds.forEach(function(rd,r){
+    var next=[];
+    rd.querySelectorAll(".m").forEach(function(m,j){
+      var cells=m.querySelectorAll(":scope > span"),a=cur[2*j]||null,b=cur[2*j+1]||null,key=r+"-"+j,s=sc[key],w=null;
+      if(r>0){fillCell(cells[0],a,md);fillCell(cells[1],b,md)}
+      if(s){var p=s.split(":"),x=+p[0],y=+p[1];if(a&&b&&x!==y){w=x>y?a:b;cells[x>y?0:1].classList.add("win")}}
+      if(s||(isAdmin()&&a&&b)){
+        var t=document.createElement("div");t.className="sc"+(s?"":" add");
+        t.textContent=s?s.replace(":"," : ")+(r===R-1?" (карты)":""):"+ внести счёт";m.appendChild(t);
+        if(isAdmin()&&a&&b){t.style.cursor="pointer";t.addEventListener("click",function(){
+          var v=prompt(r===R-1?"Счёт по картам, например 3:1 (до трёх побед). Пусто — очистить.":"Счёт матча, например 13:9. Пусто — очистить.",s||"");
+          if(v===null)return;v=v.trim();
+          if(v&&!/^\d{1,3}:\d{1,3}$/.test(v)){alert("Формат: 13:9");return}
+          if(v){var q=v.split(":").map(Number);if(q[0]===q[1]){alert("Ничья невозможна");return}
+            if(r===R-1&&(Math.max(q[0],q[1])!==3||Math.min(q[0],q[1])>2)){alert("В финале до трёх карт: 3:0, 3:1 или 3:2");return}}
+          DB.setScore(md,key,v).then(function(){fillBr()}).catch(function(){alert("Не удалось сохранить счёт")});
+        })}
+      }
+      next[j]=w;
+    });
+    cur=next;
+  });
+  if(cur[0]){var d=document.createElement("div");d.className="champ";d.textContent="🏆 "+cur[0].nick+(md==="duo"&&cur[0].partner?" + "+cur[0].partner:"");rds[R-1].appendChild(d)}
+}
 var ARR={solo:[],duo:[]},DRAG=null;
 function bindDrag(box,md){
   box.querySelector(".rd").querySelectorAll(".m > span").forEach(function(c,i){
@@ -535,7 +579,7 @@ function dropTo(m2,i2){
 function fillBr(){
   ["solo","duo"].forEach(function(md){bracket(16,$("br-"+md))});
   if(!DB)return;
-  DB.slots().then(function(l){
+  Promise.all([DB.slots(),DB.results().catch(function(){return {}})]).then(function(rs){var l=rs[0],RES=rs[1]||{};
     ["solo","duo"].forEach(function(md){
       var box=$("br-"+md);bracket(16,box);
       var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md&&x.status!=="no"}).sort(function(x,y){return (x.t||0)-(y.t||0)});
@@ -545,7 +589,7 @@ function fillBr(){
       var cells=box.querySelector(".rd").querySelectorAll(".m > span");
       arr.forEach(function(x,i){var c=cells[i];if(!c||!x)return;c.classList.toggle("pend",x.status!=="ok");
         if(md==="duo"){var s=c.querySelectorAll("i");s[0].textContent=x.nick;s[1].textContent=x.partner||"—"}else c.textContent=x.nick});
-      bindDrag(box,md);
+      bindDrag(box,md);applyRes(box,md,ARR[md],(RES[md]||{}));
     });
   }).catch(function(){});
 }
