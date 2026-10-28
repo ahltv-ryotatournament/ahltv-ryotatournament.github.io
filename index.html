@@ -176,6 +176,16 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
   .cd b{transition:color .3s ease}
   .timer:hover .cd b{color:#ff8547}
 }
+
+/* Выпадающее меню «Аккаунт» → Профиль / Аккаунт */
+.dd{position:relative}
+.dd-menu{position:absolute;right:0;top:calc(100% + .5rem);min-width:190px;padding:.4rem;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.45);z-index:12;animation:softIn .2s ease both}
+.dd-menu button{display:block;width:100%;text-align:left;margin:0;padding:.7rem .9rem;border-radius:10px;color:var(--ink)}
+.dd-menu button::after{display:none}
+.dd-menu button:hover{background:rgba(255,106,43,.1);color:var(--or)}
+#a-in[data-view="profile"] .v-acc,#a-in[data-view="account"] .v-prof{display:none}
+#a-in[data-view="account"] #a-left{border-top:0;padding-top:0}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
@@ -199,6 +209,8 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
   nav .ghost{margin-left:0}
   nav .ghost::before{display:none}
   nav .cta{text-align:center;margin-top:.45rem;border-radius:12px}
+  .dd-menu{position:static;margin-top:.4rem;box-shadow:none;animation:none}
+  .dd-menu button{border-radius:10px}
   main{padding:1.75rem .9rem 2.5rem}
   section{min-width:0}
   h1{font-size:clamp(2rem,10vw,2.75rem);line-height:1.05;margin-bottom:1rem;overflow-wrap:break-word}
@@ -284,7 +296,13 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
     <button data-go="rules">Правила</button>
     <button class="ghost" data-go="admin" id="nav-admin" hidden>Админка</button>
     <button class="ghost" data-go="account" id="nav-acc">Аккаунт</button>
-    <button class="cta" data-go="apply" id="nav-cta">Регистрация</button>
+    <div class="dd" id="dd">
+      <button class="cta" data-go="apply" id="nav-cta" aria-expanded="false">Регистрация</button>
+      <div class="dd-menu" id="acc-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-view="profile">Профиль</button>
+        <button type="button" role="menuitem" data-view="account">Аккаунт</button>
+      </div>
+    </div>
   </nav>
 </div></header>
 <main>
@@ -377,7 +395,7 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
       <button class="btn" id="tg">Скопировать и открыть Telegram</button>
     </div>
   </div></section>
-  <section id="account"><p class="eyebrow">Аккаунт</p><h1>Аккаунт</h1>
+  <section id="account"><p class="eyebrow">Аккаунт</p><h1 id="acc-h1">Аккаунт</h1>
     <div class="acc" id="a-out">
       <div class="seg" id="a-mode"><button class="on" data-a="in">Вход</button><button data-a="up">Регистрация</button></div>
       <label class="fld"><span>Почта</span><input id="a-mail" type="email" autocomplete="email"></label>
@@ -388,15 +406,15 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
       <button class="btn" id="a-reset" type="button">Забыли пароль?</button>
       <p class="note" id="a-note"></p>
     </div>
-    <div class="acc2" id="a-in" hidden><div class="me-hero"><b id="p-big"></b><span id="p-rank"></span></div><div class="pstats" id="p-stats"></div><div class="acc" id="a-left" style="margin:0">
-      <div class="field" id="a-me"></div>
-      <p class="note" id="v-note" hidden></p><button class="btn" id="v-send" hidden>Отправить письмо ещё раз</button>
-      <div class="acc" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
+    <div class="acc2" id="a-in" data-view="profile" hidden><div class="me-hero v-prof"><b id="p-big"></b><span id="p-rank"></span></div><div class="pstats v-prof" id="p-stats"></div><div class="acc" id="a-left" style="margin:0">
+      <div class="field v-acc" id="a-me"></div>
+      <p class="note v-acc" id="v-note" hidden></p><button class="btn v-acc" id="v-send" hidden>Отправить письмо ещё раз</button>
+      <div class="acc v-prof" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
         <label class="fld"><span>Steam (ссылка)</span><input id="p-steam" type="url" placeholder="https://steamcommunity.com/id/..."></label>
         <p class="note" id="p-link"></p><button class="btn" id="p-save">Сохранить</button></div>
       
-      <div class="acc" id="a-apps" style="margin:0"></div>
-      <div class="btns"><button class="btn" data-go="apply" id="a-reg">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div></div>
+      <div class="acc v-acc" id="a-apps" style="margin:0"></div>
+      <div class="btns v-acc"><button class="btn" data-go="apply" id="a-reg">Записаться на турнир</button><button class="btn main" id="a-adm" data-go="admin" hidden>Открыть админку</button><button class="btn" id="a-exit">Выйти</button></div></div>
     </div>
   </section>
   <section id="top"><p class="eyebrow">Рейтинг</p><h1>Топ игроков</h1><div class="tw"><table class="tbl" id="top-t"></table></div></section>
@@ -456,7 +474,7 @@ function go(id){
   window.scrollTo(0,0);
   document.querySelector(".egg").hidden=(id!=="home");
 }
-document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){go(b.dataset.go)})});
+document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){if(b.dataset.go)go(b.dataset.go)})});
 function pad(n){return String(n).padStart(2,"0")}
 function tick(){
   var c=document.getElementById("cd");if(!c)return;c.hidden=!START;
@@ -617,7 +635,9 @@ var STN={"new":"На проверке",ok:"Принята",no:"Отклонен�
 function refresh(){
   $("a-out").hidden=!!ME;$("a-in").hidden=!ME;
   var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=false;
-  $("f-pwf").hidden=!!ME;$("nav-acc").hidden=!!ME;var c=$("nav-cta");c.textContent=ME?"Аккаунт":"Регистрация";c.dataset.go=ME?"account":"apply";
+  $("f-pwf").hidden=!!ME;$("nav-acc").hidden=!!ME;
+  var c=$("nav-cta");c.textContent=ME?"Аккаунт ▾":"Регистрация";
+  if(ME)c.removeAttribute("data-go");else{c.dataset.go="apply";closeDd();setView("account")}
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
     DB.list(false).then(function(l){$("a-apps").innerHTML=l.length?l.map(function(x){return '<div class="field">'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick)+' · '+STN[x.status||"new"]+'</div>'}).join(""):'<p class="note">Заявок пока нет.</p>'}).catch(function(){});
@@ -930,6 +950,17 @@ $("a-exit").addEventListener("click",function(){DB.logout()});
   window.closeMobileNav=close;
   sync();setTimeout(setHdr,300);
 })();
+
+// Выпадающее меню кнопки «Аккаунт»: Профиль / Аккаунт
+function setView(v){$("a-in").dataset.view=v;$("acc-h1").textContent=v==="profile"?"Профиль":"Аккаунт"}
+function closeDd(){var m=$("acc-menu");if(m)m.hidden=true;var c=$("nav-cta");if(c)c.setAttribute("aria-expanded","false")}
+function toggleDd(){var m=$("acc-menu"),o=m.hidden;m.hidden=!o;$("nav-cta").setAttribute("aria-expanded",o?"true":"false")}
+$("nav-cta").addEventListener("click",function(e){if(!ME)return;e.stopPropagation();toggleDd()});
+document.querySelectorAll("#acc-menu button").forEach(function(b){
+  b.addEventListener("click",function(){setView(b.dataset.view);closeDd();go("account")});
+});
+document.addEventListener("click",function(e){if(!$("dd").contains(e.target))closeDd()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDd()});
 
 tick();setInterval(tick,1000);
 (async function(){
