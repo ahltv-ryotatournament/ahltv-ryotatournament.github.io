@@ -185,6 +185,7 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
 .dd-menu button:hover{background:rgba(255,106,43,.1);color:var(--or)}
 #a-in[data-view="profile"] .v-acc,#a-in[data-view="account"] .v-prof{display:none}
 #a-in[data-view="account"] #a-left{border-top:0;padding-top:0}
+#a-in[data-view="profile"] #a-left{display:none}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
@@ -409,7 +410,7 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
     <div class="acc2" id="a-in" data-view="profile" hidden><div class="me-hero v-prof"><b id="p-big"></b><span id="p-rank"></span></div><div class="pstats v-prof" id="p-stats"></div><div class="acc" id="a-left" style="margin:0">
       <div class="field v-acc" id="a-me"></div>
       <p class="note v-acc" id="v-note" hidden></p><button class="btn v-acc" id="v-send" hidden>Отправить письмо ещё раз</button>
-      <div class="acc v-prof" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
+      <div class="acc v-acc" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
         <label class="fld"><span>Steam (ссылка)</span><input id="p-steam" type="url" placeholder="https://steamcommunity.com/id/..."></label>
         <p class="note" id="p-link"></p><button class="btn" id="p-save">Сохранить</button></div>
       
