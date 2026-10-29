@@ -14,6 +14,8 @@
    +'<linearGradient id="awBronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3BE8A"/><stop offset="1" stop-color="#9A5524"/></linearGradient>'
    +'<linearGradient id="awMvp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A3D"/><stop offset="1" stop-color="#B8400E"/></linearGradient>'
    +'<linearGradient id="awStar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF6C2"/><stop offset="1" stop-color="#F5B21B"/></linearGradient>'
+   +'<linearGradient id="awPale" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6E9B8"/><stop offset="1" stop-color="#D8BA6A"/></linearGradient>'
+   +'<linearGradient id="awRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBEFC4"/><stop offset="1" stop-color="#B8903A"/></linearGradient>'
    +'</defs></svg>';
   function svg(inner,size,label){return '<svg viewBox="0 0 64 64" width="'+size+'" height="'+size+'" role="img" aria-label="'+label+'">'+inner+'</svg>'}
   function medal(fill,rib1,rib2,num,numColor,label,size){
@@ -21,6 +23,16 @@
       +'<circle cx="32" cy="43" r="18" fill="url(#'+fill+')" stroke="rgba(0,0,0,.28)" stroke-width="1"/>'
       +'<circle cx="32" cy="43" r="13" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.6"/>'
       +'<text x="32" y="49.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="18" fill="'+numColor+'">'+num+'</text>',size,label);
+  }
+  function laurel(){
+    var h="";
+    [[75,165,1],[195,285,-1]].forEach(function(r){
+      for(var a=r[0];a<=r[1];a+=15){
+        var rad=a*Math.PI/180,x=(32+27.3*Math.sin(rad)).toFixed(1),y=(32-27.3*Math.cos(rad)).toFixed(1);
+        h+='<ellipse cx="'+x+'" cy="'+y+'" rx="1.5" ry="3" transform="rotate('+(a-90+r[2]*30)+' '+x+' '+y+')" fill="#8A6A22"/>';
+      }
+    });
+    return h;
   }
   function badge(kind,size){
     size=size||56;
@@ -33,9 +45,13 @@
       +'<rect x="17" y="53" width="30" height="5" rx="1.6" fill="url(#awGoldD)"/>',size,"Кубок, 1 место");
     if(kind==="silver")return medal("awSilver","#4F78B8","#3E6199","2","#4A505A","Серебряная медаль, 2 место",size);
     if(kind==="bronze")return medal("awBronze","#B5532A","#8E3F1E","3","#6B3814","Бронзовая медаль, 3 место",size);
-    return svg('<path d="M32 3 55 11v19c0 14-9 24-23 30C18 54 9 44 9 30V11z" fill="url(#awMvp)" stroke="rgba(255,196,143,.7)" stroke-width="1.2"/>'
-      +'<polygon points="'+star(32,26,13,5.6)+'" fill="url(#awStar)" stroke="rgba(120,70,0,.35)" stroke-width=".6"/>'
-      +'<text x="32" y="51" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="12" letter-spacing=".6" fill="#fff">MVP</text>',size,"MVP");
+    return svg('<circle cx="32" cy="32" r="30" fill="url(#awRim)" stroke="rgba(90,60,10,.4)" stroke-width="1"/>'
+      +laurel()
+      +'<circle cx="32" cy="32" r="24.5" fill="none" stroke="rgba(90,60,10,.4)" stroke-width="1"/>'
+      +'<circle cx="32" cy="32" r="23.5" fill="url(#awPale)"/>'
+      +[25,32,39].map(function(x){return '<polygon points="'+star(x,19,2.6,1.1)+'" fill="#9A7420" opacity=".95"/>'}).join("")
+      +'<text x="32" y="42" text-anchor="middle" textLength="35" lengthAdjust="spacingAndGlyphs" font-family="Arial,Helvetica,sans-serif" font-style="italic" font-weight="800" font-size="17" fill="#FFFBEA" stroke="#7A5A14" stroke-width=".9" paint-order="stroke">MVP</text>'
+      +'<path d="M24 47q8 3 16 0" fill="none" stroke="#9A7420" stroke-width="1.1" stroke-linecap="round" opacity=".9"/>',size,"MVP");
   }
   window.ahBadge=badge;
 
