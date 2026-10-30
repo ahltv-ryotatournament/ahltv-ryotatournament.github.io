@@ -38,7 +38,7 @@
     box.innerHTML=h;
     var md=box.closest(".mode");
     if(md){var sl=md.querySelector(".slots");sl.textContent=n+" "+sl.dataset.unit}
-    box.previousElementSibling.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.n===n)});
+    var pv=box.previousElementSibling;if(pv&&pv.querySelectorAll)pv.querySelectorAll("button").forEach(function(b){b.classList.toggle("on",+b.dataset.n===n)});
   };
   document.querySelectorAll("#format .seg.sz").forEach(function(seg){
     var b=document.createElement("button");b.dataset.n="32";b.textContent="32x";
