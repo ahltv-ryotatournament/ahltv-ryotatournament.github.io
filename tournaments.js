@@ -1,5 +1,5 @@
 /* AHLTV: список турниров (1×1 / 2×2, 8x / 16x / 32x) и их создание в админке.
-   Подключение в index.html: <script src="tournaments.js"></script>
+   Подключение в index.html: <script src="tournaments.js?v=4"></script>
    (после awards.js, ПЕРЕД i18n.js) */
 (function(){
   if(window.__ahTours)return;window.__ahTours=true;
@@ -24,7 +24,7 @@
    +".sm.on{border-color:var(--or);color:var(--or)}";
   document.head.appendChild(css);
 
-  /* ---------- сетка на 32 (на странице «Формат») ---------- */
+  /* ---------- сетка на 8 / 16 / 32 ---------- */
   var NAMES={32:["1/16 финала","1/8 финала","1/4 финала","Полуфинал","Финал"],16:["1/8 финала","1/4 финала","Полуфинал","Финал"],8:["1/4 финала","Полуфинал","Финал"]};
   window.bracket=function(n,box){
     var names=NAMES[n]||NAMES[16],h="",m=n/2;
@@ -45,6 +45,29 @@
     seg.insertBefore(b,seg.firstChild);
     b.addEventListener("click",function(){window.bracket(32,seg.nextElementSibling)});
   });
+
+  /* ---------- размер сетки на странице «Сетка» / во всплывающем окне ---------- */
+  var BRN=16; // текущий размер сетки (задаётся выбранным турниром)
+  window.fillBr=function(){
+    var n=BRN;
+    ["solo","duo"].forEach(function(md){window.bracket(n,$("br-"+md))});
+    if(!window.DB)return;
+    Promise.all([window.DB.slots(),window.DB.results().catch(function(){return {}})]).then(function(rs){
+      var l=rs[0],RES=rs[1]||{};
+      ["solo","duo"].forEach(function(md){
+        var box=$("br-"+md);window.bracket(n,box);
+        var a=l.filter(function(x){return (x.mode==="duo"?"duo":"solo")===md&&x.status!=="no"}).sort(function(x,y){return (x.t||0)-(y.t||0)});
+        var arr=new Array(n).fill(null),rest=[];
+        a.forEach(function(x){var p=x.pos;if(typeof p==="number"&&p>=0&&p<n&&!arr[p])arr[p]=x;else rest.push(x)});
+        rest.forEach(function(x){var j=arr.indexOf(null);if(j>=0)arr[j]=x});
+        window.ARR[md]=arr;
+        var cells=box.querySelector(".rd").querySelectorAll(".m > span");
+        arr.forEach(function(x,i){var c=cells[i];if(!c||!x)return;c.classList.toggle("pend",x.status!=="ok");
+          if(md==="duo"){var s=c.querySelectorAll("i");s[0].textContent=x.nick;s[1].textContent=x.partner||"—"}else c.textContent=x.nick});
+        window.bindDrag(box,md);window.applyRes(box,md,arr,(RES[md]||{}));
+      });
+    }).catch(function(){});
+  };
 
   /* ---------- хранилище ---------- */
   var FSX=null;
@@ -87,13 +110,14 @@
     if(held&&held.parent)held.parent.insertBefore(held.box,held.next);
     ov.remove();ov=null;held=null;document.body.style.overflow="";
   }
-  function openBr(mode,title){
+  function openBr(mode,title,size){
     closeBr();
+    BRN=+size||16;
     var box=$("br-"+mode);if(!box)return;
     held={box:box,parent:box.parentNode,next:box.nextSibling};
     ov=document.createElement("div");ov.id="br-ov";
     ov.innerHTML='<div class="ov-p" role="dialog" aria-modal="true"><div class="ov-h"><b></b><button class="ov-x" type="button" aria-label="Закрыть">✕</button></div><div id="ov-body"></div></div>';
-    ov.querySelector("b").textContent=title+" · "+ml(mode);
+    ov.querySelector("b").textContent=title+" · "+ml(mode)+" · "+BRN+"x";
     ov.querySelector("#ov-body").appendChild(box);
     document.body.appendChild(ov);document.body.style.overflow="hidden";
     ov.querySelector(".ov-x").addEventListener("click",closeBr);
@@ -120,7 +144,7 @@
       +'<div class="stat"><small>Старт</small><b style="font-size:.95rem">'+E(fmt(t.start))+'</b></div>'
       +'<div class="stat"><small>Статус</small><b class="'+(st==="open"?"s-ok":st==="done"?"s-no":"")+'">'+STS[st]+'</b></div></div>'
       +(t.desc?'<p class="tt-desc">'+E(t.desc)+'</p>':'')
-      +'<div class="btns">'+(st==="open"?'<button class="btn main" data-tt="reg" data-m="'+(duo?"duo":"solo")+'">Зарегистрироваться на турнир</button>':'')
+      +'<div class="btns">'+(st==="open"?'<button class="btn main" data-tt="reg" data-m="'+(duo?"duo":"solo")+'" data-id="'+E(t.id)+'">Зарегистрироваться на турнир</button>':'')
       +'<button class="btn" data-tt="br" data-m="'+(duo?"duo":"solo")+'" data-id="'+E(t.id)+'">Сетка</button></div></div>';
   }
   function renderPub(){
@@ -138,7 +162,9 @@
   $("tt-s").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;PS=+b.dataset.s;renderPub()});
   $("tt-list").addEventListener("click",function(e){
     var b=e.target.closest("button[data-tt]");if(!b)return;
-    if(b.dataset.tt==="br"){var tt=CACHE.find(function(x){return x.id===b.dataset.id});openBr(b.dataset.m,tt?tt.title:"Сетка");return}
+    var tt=CACHE.find(function(x){return x.id===b.dataset.id});
+    if(b.dataset.tt==="br"){openBr(b.dataset.m,tt?tt.title:"Сетка",tt?tt.size:16);return}
+    BRN=tt?(+tt.size||16):16;
     window.go("apply");
     var mb=document.querySelector('#f-mode button[data-m="'+b.dataset.m+'"]');if(mb)mb.click();
   });
