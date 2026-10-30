@@ -69,6 +69,37 @@
     return fsx().then(function(o){return o.F.deleteDoc(o.F.doc(o.db,"tournaments",id))});
   }
 
+  /* ---------- сетка поверх страницы ---------- */
+  var cs=document.createElement("style");
+  cs.textContent="#br-ov{position:fixed;inset:0;z-index:30;background:rgba(8,5,4,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 1rem);animation:softIn .2s ease both}"
+   +".ov-p{width:100%;max-width:1120px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:1.1rem 1.1rem 1.3rem;box-shadow:0 20px 60px rgba(0,0,0,.6)}"
+   +".ov-h{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem}"
+   +".ov-h b{font:800 1.4rem/1.1 var(--head);color:var(--or);word-break:break-word}"
+   +".ov-x{flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:1.2rem;cursor:pointer}"
+   +".ov-x:hover{border-color:var(--or);color:var(--or)}";
+  document.head.appendChild(cs);
+  var navBr=document.querySelector('nav [data-go="bracket"]');if(navBr)navBr.hidden=true;
+  var ov=null,held=null;
+  function closeBr(){
+    if(!ov)return;
+    if(held&&held.parent)held.parent.insertBefore(held.box,held.next);
+    ov.remove();ov=null;held=null;document.body.style.overflow="";
+  }
+  function openBr(mode,title){
+    closeBr();
+    var box=$("br-"+mode);if(!box)return;
+    held={box:box,parent:box.parentNode,next:box.nextSibling};
+    ov=document.createElement("div");ov.id="br-ov";
+    ov.innerHTML='<div class="ov-p" role="dialog" aria-modal="true"><div class="ov-h"><b></b><button class="ov-x" type="button" aria-label="Закрыть">✕</button></div><div id="ov-body"></div></div>';
+    ov.querySelector("b").textContent=title+" · "+ml(mode);
+    ov.querySelector("#ov-body").appendChild(box);
+    document.body.appendChild(ov);document.body.style.overflow="hidden";
+    ov.querySelector(".ov-x").addEventListener("click",closeBr);
+    ov.addEventListener("click",function(e){if(e.target===ov)closeBr()});
+    if(window.fillBr)window.fillBr();
+  }
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeBr()});
+
   /* ---------- публичная страница «Турниры» ---------- */
   var CACHE=[],PM="solo",PS=0;
   var sec=$("tour");
@@ -88,7 +119,7 @@
       +'<div class="stat"><small>Статус</small><b class="'+(st==="open"?"s-ok":st==="done"?"s-no":"")+'">'+STS[st]+'</b></div></div>'
       +(t.desc?'<p class="tt-desc">'+E(t.desc)+'</p>':'')
       +'<div class="btns">'+(st==="open"?'<button class="btn main" data-tt="reg" data-m="'+(duo?"duo":"solo")+'">Зарегистрироваться на турнир</button>':'')
-      +'<button class="btn" data-tt="br">Сетка</button></div></div>';
+      +'<button class="btn" data-tt="br" data-m="'+(duo?"duo":"solo")+'" data-id="'+E(t.id)+'">Сетка</button></div></div>';
   }
   function renderPub(){
     $("tt-m").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.m===PM)});
@@ -105,7 +136,7 @@
   $("tt-s").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;PS=+b.dataset.s;renderPub()});
   $("tt-list").addEventListener("click",function(e){
     var b=e.target.closest("button[data-tt]");if(!b)return;
-    if(b.dataset.tt==="br"){window.go("bracket");return}
+    if(b.dataset.tt==="br"){var tt=CACHE.find(function(x){return x.id===b.dataset.id});openBr(b.dataset.m,tt?tt.title:"Сетка");return}
     window.go("apply");
     var mb=document.querySelector('#f-mode button[data-m="'+b.dataset.m+'"]');if(mb)mb.click();
   });
@@ -172,6 +203,7 @@
   /* ---------- хуки на переходы между страницами ---------- */
   var origGo=window.go;
   window.go=function(id){
+    closeBr();
     var r=origGo.apply(this,arguments);
     if(id==="tour")loadPub(6);
     if(id==="admin"){panel.hidden=true;tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.dataset.t==="tours")});$("ad-tours").hidden=false;$("ad-set").hidden=true;own.hidden=true}
