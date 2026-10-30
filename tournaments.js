@@ -71,12 +71,14 @@
 
   /* ---------- сетка поверх страницы ---------- */
   var cs=document.createElement("style");
-  cs.textContent="#br-ov{position:fixed;inset:0;z-index:30;background:rgba(8,5,4,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 1rem);animation:softIn .2s ease both}"
-   +".ov-p{width:100%;max-width:1120px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:1.1rem 1.1rem 1.3rem;box-shadow:0 20px 60px rgba(0,0,0,.6)}"
-   +".ov-h{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem}"
-   +".ov-h b{font:800 1.4rem/1.1 var(--head);color:var(--or);word-break:break-word}"
+  cs.textContent="#br-ov{position:fixed;inset:0;z-index:30;background:rgba(6,3,2,.72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 1rem);animation:ovFade .18s ease both}"
+   +".ov-p{display:flex;flex-direction:column;width:min(900px,100%);max-height:100%;min-width:0;background:var(--bg);border:1px solid var(--or);border-radius:18px;box-shadow:0 0 0 1px rgba(255,106,43,.15),0 24px 70px rgba(0,0,0,.7),0 0 40px rgba(255,106,43,.12);animation:ovPop .22s cubic-bezier(.22,.61,.36,1) both}"
+   +".ov-h{flex:none;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.9rem 1rem .9rem 1.2rem;border-bottom:1px solid var(--line)}"
+   +".ov-h b{font:800 1.3rem/1.1 var(--head);color:var(--or);word-break:break-word}"
+   +"#ov-body{flex:1;min-height:0;overflow:auto;padding:1.1rem 1.2rem 1.3rem;-webkit-overflow-scrolling:touch}"
    +".ov-x{flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:1.2rem;cursor:pointer}"
-   +".ov-x:hover{border-color:var(--or);color:var(--or)}";
+   +".ov-x:hover{border-color:var(--or);color:var(--or)}"
+   +"@keyframes ovFade{from{opacity:0}to{opacity:1}}@keyframes ovPop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}";
   document.head.appendChild(cs);
   var navBr=document.querySelector('nav [data-go="bracket"]');if(navBr)navBr.hidden=true;
   var ov=null,held=null;
