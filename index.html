@@ -182,7 +182,19 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
 .dd-menu{position:absolute;right:0;top:calc(100% + .5rem);min-width:190px;padding:.4rem;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.45);z-index:12;animation:softIn .2s ease both}
 .dd-menu button{display:block;width:100%;text-align:left;margin:0;padding:.7rem .9rem;border-radius:10px;color:var(--ink)}
 .dd-menu button::after{display:none}
-.dd-menu button:hover{background:rgba(255,106,43,.1);color:var(--or)}
+.dd-menu button:hover,.dd-menu button:focus-visible{background:rgba(255,106,43,.1);color:var(--or)}
+.profile-actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.5rem}
+.profile-actions .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:.9rem}
+.profile-panel{grid-column:1/-1;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:1.4rem}
+.profile-panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.7rem;margin-bottom:1rem}
+.profile-panel-head h2{font:800 1.3rem var(--head);margin:0}
+.profile-panel-head button{border:0;background:none;color:var(--or);font-weight:700;padding:.35rem 0}
+.profile-apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.7rem}
+.profile-app{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:.9rem 1rem;min-width:0}
+.profile-app strong,.profile-app span{display:block;overflow-wrap:anywhere}
+.profile-app span{margin-top:.3rem;color:var(--muted);font-size:.9rem}
+.profile-apps .note{margin:0}
+@media (max-width:640px){.profile-actions{flex-direction:column}.profile-panel{padding:1rem}.profile-panel-head button{min-height:44px}}
 #a-in[data-view="profile"] .v-acc,#a-in[data-view="account"] .v-prof{display:none}
 #a-in[data-view="account"] #a-left{border-top:0;padding-top:0}
 #a-in[data-view="profile"] #a-left{display:none}
@@ -298,7 +310,7 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
     <button class="ghost" data-go="admin" id="nav-admin" hidden>Админка</button>
     <button class="ghost" data-go="account" id="nav-acc">Аккаунт</button>
     <div class="dd" id="dd">
-      <button class="cta" data-go="apply" id="nav-cta" aria-expanded="false">Регистрация</button>
+      <button class="cta" data-go="apply" id="nav-cta" aria-expanded="false" aria-controls="acc-menu">Регистрация</button>
       <div class="dd-menu" id="acc-menu" role="menu" hidden>
         <button type="button" role="menuitem" data-view="profile">Профиль</button>
         <button type="button" role="menuitem" data-view="account">Аккаунт</button>
@@ -407,7 +419,11 @@ section.on{animation:secIn .32s cubic-bezier(.22,.61,.36,1) both}
       <button class="btn" id="a-reset" type="button">Забыли пароль?</button>
       <p class="note" id="a-note"></p>
     </div>
-    <div class="acc2" id="a-in" data-view="profile" hidden><div class="me-hero v-prof"><b id="p-big"></b><span id="p-rank"></span></div><div class="pstats v-prof" id="p-stats"></div><div class="acc" id="a-left" style="margin:0">
+    <div class="acc2" id="a-in" data-view="profile" hidden><div class="me-hero v-prof"><b id="p-big"></b><span id="p-rank"></span>
+      <div class="profile-actions"><button class="btn" type="button" id="p-edit">Редактировать профиль</button><a class="btn" id="p-steam-quick" target="_blank" rel="noopener noreferrer" hidden>Открыть профиль Steam</a><button class="btn" type="button" data-go="top">Топ игроков</button></div>
+    </div><div class="pstats v-prof" id="p-stats"></div>
+    <div class="profile-panel v-prof"><div class="profile-panel-head"><h2>Мои заявки</h2><button type="button" data-go="apply">Записаться на турнир →</button></div><div class="profile-apps" id="p-apps" aria-live="polite"><p class="note">Загрузка…</p></div></div>
+    <div class="acc" id="a-left" style="margin:0">
       <div class="field v-acc" id="a-me"></div>
       <p class="note v-acc" id="v-note" hidden></p><button class="btn v-acc" id="v-send" hidden>Отправить письмо ещё раз</button>
       <div class="acc v-acc" style="margin:0"><label class="fld"><span>Ник</span><input id="p-nick" maxlength="24"></label>
@@ -546,7 +562,12 @@ function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function hash(s){if(!(window.crypto&&crypto.subtle))return Promise.resolve(String(s.split("").reduce(function(a,c){return (a*31+c.charCodeAt(0))|0},7)));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.from(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
 function normMail(m){return String(m==null?"":m).trim().toLowerCase()}
 function ownerEmail(){return normMail(ADMIN_EMAIL)}
-function setMe(u){ME=u;ADMINS=[];refresh();if(u&&DB){loadAdmins(2);loadProfile()}}
+function setMe(u){
+  if((ME&&ME.uid)!==(u&&u.uid)){
+    PROF={};$("p-big").textContent="";$("p-rank").textContent="";$("p-stats").innerHTML="";$("p-apps").innerHTML='<p class="note">Загрузка…</p>';$("a-apps").innerHTML="";$("p-nick").value="";$("p-steam").value="";plink();
+  }
+  ME=u;ADMINS=[];refresh();if(u&&DB){loadAdmins(2);loadProfile()}
+}
 function isOwner(){if(!ME)return false;var oe=ownerEmail();return oe?normMail(ME.email)===oe:!!(DB&&DB.local&&ME.uid==="u1")}
 function isAdmin(){if(isOwner())return true;var em=normMail(ME&&ME.email);return !!em&&ADMINS.indexOf(em)>-1}
 // Демо-режим: всё хранится в localStorage этого браузера
@@ -638,10 +659,14 @@ function refresh(){
   var a=isAdmin();$("nav-admin").hidden=!a;$("a-adm").hidden=true;$("a-reg").hidden=true;$("a-apps").hidden=false;
   $("f-pwf").hidden=!!ME;$("nav-acc").hidden=!!ME;
   var c=$("nav-cta");c.textContent=ME?"Аккаунт ▾":"Регистрация";
-  if(ME)c.removeAttribute("data-go");else{c.dataset.go="apply";closeDd();setView("account")}
+  if(ME){c.removeAttribute("data-go");c.setAttribute("aria-haspopup","menu")}else{c.dataset.go="apply";c.removeAttribute("aria-haspopup");closeDd();setView("account")}
   if(ME&&DB){
     $("a-me").textContent=ME.email;if(!$("f-mail").value)$("f-mail").value=ME.email;
-    DB.list(false).then(function(l){$("a-apps").innerHTML=l.length?l.map(function(x){return '<div class="field">'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick)+' · '+STN[x.status||"new"]+'</div>'}).join(""):'<p class="note">Заявок пока нет.</p>'}).catch(function(){});
+    var uid=ME.uid;
+    DB.list(false).then(function(l){if(!ME||ME.uid!==uid)return;
+      $("a-apps").innerHTML=l.length?l.map(function(x){return '<div class="field">'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick)+' · '+STN[x.status||"new"]+'</div>'}).join(""):'<p class="note">Заявок пока нет.</p>';
+      $("p-apps").innerHTML=l.length?l.map(function(x){return '<div class="profile-app"><strong>'+esc(x.mode==="duo"?"2×2":"1×1")+' · '+esc(x.nick||"—")+'</strong><span>'+esc(STN[x.status||"new"]||STN.new)+'</span></div>'}).join(""):'<p class="note">Заявок пока нет.</p>';
+    }).catch(function(){if(ME&&ME.uid===uid)$("p-apps").innerHTML='<p class="note">Не удалось загрузить заявки.</p>'});
   }
   var sec=document.querySelector("section.on");if(sec&&sec.id==="admin"&&!a)go("account");
 }
@@ -800,21 +825,27 @@ function loadTop(){
   }).catch(function(){$("top-t").innerHTML='<tr><td>Не удалось загрузить рейтинг.</td></tr>'});
 }
 function renderHero(){
+  var uid=ME&&ME.uid;
   $("p-big").textContent=PROF.nick||(ME?ME.email.split("@")[0]:"");$("p-rank").textContent="";
   DB.topStats().then(function(l){
+    if(!ME||ME.uid!==uid)return;
     l=l.filter(function(x){return x.matches>0}).map(function(x){x.kd=x.deaths?x.kills/x.deaths:x.kills;return x}).sort(function(a,b){return b.kd-a.kd});
     var i=l.findIndex(function(x){return ME&&x.id===ME.uid});
     $("p-rank").textContent=i<0?"Пока без места в рейтинге":"Место в рейтинге: "+(i+1);
   }).catch(function(){});
 }
 var PROF={};
-function plink(){var u=PROF.steam||"";$("p-link").innerHTML=/^https?:\/\//.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Открыть профиль Steam</a>':"Steam не указан."}
+function plink(){var u=PROF.steam||"";$("p-link").innerHTML=/^https?:\/\//.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Открыть профиль Steam</a>':"Steam не указан.";
+  var quick=$("p-steam-quick"),safe=false;try{var url=new URL(u);safe=(url.protocol==="https:"||url.protocol==="http:")&&url.hostname.toLowerCase()==="steamcommunity.com"}catch(e){}
+  quick.hidden=!safe;if(safe)quick.href=url.href;else quick.removeAttribute("href");
+}
 function loadProfile(){
-  DB.verified().then(function(v){var n=$("v-note"),b=$("v-send");if(v===null){n.hidden=true;b.hidden=true;return}n.hidden=false;n.textContent=v?"Почта подтверждена ✓":"Почта не подтверждена. Проверьте письмо (и папку «Спам»).";b.hidden=!!v}).catch(function(){});
-  DB.getProfile().then(function(p){PROF=p||{};$("p-nick").value=PROF.nick||"";$("p-steam").value=PROF.steam||"";
+  var uid=ME&&ME.uid;
+  DB.verified().then(function(v){if(!ME||ME.uid!==uid)return;var n=$("v-note"),b=$("v-send");if(v===null){n.hidden=true;b.hidden=true;return}n.hidden=false;n.textContent=v?"Почта подтверждена ✓":"Почта не подтверждена. Проверьте письмо (и папку «Спам»).";b.hidden=!!v}).catch(function(){});
+  DB.getProfile().then(function(p){if(!ME||ME.uid!==uid)return;PROF=p||{};$("p-nick").value=PROF.nick||"";$("p-steam").value=PROF.steam||"";
     if(!$("f-nick").value&&PROF.nick)$("f-nick").value=PROF.nick;
     if(!$("f-faceit").value&&PROF.steam)$("f-faceit").value=PROF.steam;plink();renderHero()}).catch(function(){});
-  DB.getStats().then(function(s){s=s||{};var m=s.matches||0,k=s.kills||0,d=s.deaths||0;
+  DB.getStats().then(function(s){if(!ME||ME.uid!==uid)return;s=s||{};var m=s.matches||0,k=s.kills||0,d=s.deaths||0;
     function r(v){return Math.round(v*100)/100}
     $("p-stats").innerHTML=[["Матчи",m],["Ср. убийства",m?r(k/m):"—"],["Ср. смерти",m?r(d/m):"—"],["K/D",m?(d?r(k/d):k):"—"]].map(function(x){return '<div class="pstat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'}).join("")}).catch(function(){});
 }
@@ -936,9 +967,9 @@ $("a-exit").addEventListener("click",function(){DB.logout()});
     setTimeout(setHdr,380);
   }
   tog.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();isOpen()?close():open()});
-  nav.addEventListener("click",function(e){if(e.target.closest("button")&&isMobile())close()});
+  nav.addEventListener("click",function(e){if(e.target.closest("button")&&isMobile()&&!(e.target.closest("#nav-cta")&&ME))close()});
   document.addEventListener("click",function(e){if(isOpen()&&!hdr.contains(e.target))close()});
-  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isOpen()){close();tog.focus()}});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&isOpen()&&$("acc-menu").hidden){close();tog.focus()}});
   function sync(){
     if(isMobile()){nav.style.maxHeight=isOpen()?"none":"0px"}
     else{hdr.classList.remove("open");tog.setAttribute("aria-expanded","false");nav.style.maxHeight=""}
@@ -955,13 +986,14 @@ $("a-exit").addEventListener("click",function(){DB.logout()});
 // Выпадающее меню кнопки «Аккаунт»: Профиль / Аккаунт
 function setView(v){$("a-in").dataset.view=v;$("acc-h1").textContent=v==="profile"?"Профиль":"Аккаунт"}
 function closeDd(){var m=$("acc-menu");if(m)m.hidden=true;var c=$("nav-cta");if(c)c.setAttribute("aria-expanded","false")}
-function toggleDd(){var m=$("acc-menu"),o=m.hidden;m.hidden=!o;$("nav-cta").setAttribute("aria-expanded",o?"true":"false")}
+function toggleDd(){var m=$("acc-menu"),o=m.hidden;m.hidden=!o;$("nav-cta").setAttribute("aria-expanded",o?"true":"false");var nav=$("main-nav");if(document.querySelector("header").classList.contains("open"))nav.style.maxHeight="none"}
 $("nav-cta").addEventListener("click",function(e){if(!ME)return;e.stopPropagation();toggleDd()});
+$("p-edit").addEventListener("click",function(){setView("account");$("p-nick").focus()});
 document.querySelectorAll("#acc-menu button").forEach(function(b){
   b.addEventListener("click",function(){setView(b.dataset.view);closeDd();go("account")});
 });
 document.addEventListener("click",function(e){if(!$("dd").contains(e.target))closeDd()});
-document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDd()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("acc-menu").hidden){closeDd();$("nav-cta").focus()}});
 
 tick();setInterval(tick,1000);
 (async function(){
