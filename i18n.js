@@ -25,6 +25,8 @@
     "Профиль":["Profile","Profil"],
     "Редактировать профиль":["Edit profile","Profil bearbeiten"],
     "Мои заявки":["My applications","Meine Anmeldungen"],
+    "Разделы аккаунта":["Account sections","Kontobereiche"],
+    "Статистика":["Statistics","Statistik"],
     "Записаться на турнир →":["Join a tournament →","Für ein Turnier anmelden →"],
     "Открыть меню":["Open menu","Menü öffnen"],
     "Закрыть меню":["Close menu","Menü schließen"],
