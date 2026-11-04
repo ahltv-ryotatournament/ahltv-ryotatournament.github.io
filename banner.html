@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Баннер DMarket</title>
+<style>
+  body { margin: 0; padding: 24px 12px; background: #0f1220; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .demo-note { color: #8a90a8; font-size: 13px; text-align: center; margin-bottom: 16px; }
+
+  /* ===== БАННЕР: копируйте от этой строки до конца блока <a> ===== */
+  .dm-banner {
+    position: relative; display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; box-sizing: border-box; width: 100%; max-width: 728px; min-height: 90px;
+    margin: 0 auto; padding: 12px 20px; overflow: hidden; border-radius: 12px;
+    text-decoration: none; color: #fff;
+    background: linear-gradient(120deg, #1a1f4d, #2b1f6b, #0f5a8f, #1a1f4d);
+    background-size: 300% 300%;
+    animation: dmGradient 8s ease infinite;
+    box-shadow: 0 6px 24px rgba(20, 40, 120, .45);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .dm-banner:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 32px rgba(40, 90, 220, .6); }
+
+  /* блик, пробегающий по баннеру */
+  .dm-banner::after {
+    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+    transform: skewX(-20deg);
+    animation: dmShine 3.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* плавающие «скины» (абстрактные фигуры) */
+  .dm-skin { position: absolute; border-radius: 6px; opacity: .35; pointer-events: none; }
+  .dm-skin.s1 { width: 46px; height: 14px; background: #4fd1ff; left: 38%; top: 18%; transform: rotate(-18deg); animation: dmFloat 5s ease-in-out infinite; }
+  .dm-skin.s2 { width: 34px; height: 10px; background: #ff7ad9; left: 52%; top: 66%; transform: rotate(14deg); animation: dmFloat 6.5s ease-in-out infinite reverse; }
+  .dm-skin.s3 { width: 28px; height: 28px; background: #ffd24f; left: 66%; top: 14%; border-radius: 50%; animation: dmFloat 7s ease-in-out infinite; }
+
+  .dm-text { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .dm-title { font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .dm-sub { font-size: 13px; opacity: .85; line-height: 1.3; }
+
+  .dm-btn {
+    position: relative; z-index: 1; flex: 0 0 auto; padding: 10px 18px; border-radius: 999px;
+    background: #ffd24f; color: #1b1b1b; font-weight: 700; font-size: 14px; white-space: nowrap;
+    animation: dmPulse 1.8s ease-in-out infinite;
+  }
+  .dm-ad { position: absolute; right: 8px; top: 4px; z-index: 2; font-size: 10px; opacity: .6; letter-spacing: .04em; }
+
+  @keyframes dmGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes dmShine { 0% { left: -60%; } 55%, 100% { left: 130%; } }
+  @keyframes dmFloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+  @keyframes dmPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,210,79,.55); } 50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(255,210,79,0); } }
+
+  @media (max-width: 520px) {
+    .dm-banner { flex-direction: column; align-items: flex-start; padding: 14px 16px; }
+    .dm-title { font-size: 16px; }
+    .dm-btn { align-self: stretch; text-align: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dm-banner, .dm-banner::after, .dm-skin, .dm-btn { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <p class="demo-note">Так баннер выглядит на странице. Нажмите на него, чтобы проверить переход.</p>
+
+  <a class="dm-banner" href="https://dmarket.com?ref=T53fdotOu3" target="_blank" rel="sponsored noopener noreferrer" aria-label="Реклама: DMarket, маркетплейс скинов">
+    <span class="dm-ad">Реклама</span>
+    <span class="dm-skin s1"></span>
+    <span class="dm-skin s2"></span>
+    <span class="dm-skin s3"></span>
+    <span class="dm-text">
+      <span class="dm-title">Продаёшь или меняешь скины CS2?</span>
+      <span class="dm-sub">DMarket: маркетплейс с разными способами вывода</span>
+    </span>
+    <span class="dm-btn">Перейти на DMarket</span>
+  </a>
+  <!-- ===== конец баннера ===== -->
+</body>
+</html>
