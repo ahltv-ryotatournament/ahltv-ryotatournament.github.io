@@ -101,12 +101,11 @@
   }
   var deco=null;
   function buildDeco(){
-    var g=document.createElement("div");g.id="wa-garland";g.innerHTML=garlandSvg();
     var l=document.createElement("div");l.className="wa-deco l";
     l.innerHTML=pumpkin(84,69)+mushroom(46,49)+pumpkin(52,43);
     var r=document.createElement("div");r.className="wa-deco r";
     r.innerHTML=mushroom(40,43)+pile(130,56)+pumpkin(66,54);
-    return [g,l,r];
+    return [l,r];
   }
 
   /* ---------- листопад и дождь (один canvas) ---------- */
